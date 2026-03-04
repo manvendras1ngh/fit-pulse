@@ -30,6 +30,7 @@ type WorkoutAction =
   | { type: "SET_LOG"; log: WorkoutLog }
   | { type: "SET_EXERCISES"; exercises: ExerciseWithSets[] }
   | { type: "ADD_EXERCISE"; exercise: Exercise }
+  | { type: "REMOVE_EXERCISE"; exerciseId: string }
   | { type: "ADD_SET"; exerciseId: string; set: WorkoutSet }
   | { type: "INSERT_SET_AT"; exerciseId: string; set: WorkoutSet; index: number }
   | { type: "UPDATE_SET"; setId: string; updates: Partial<WorkoutSet> }
@@ -50,6 +51,13 @@ function workoutReducer(state: WorkoutState, action: WorkoutAction): WorkoutStat
           ...state.exercises,
           { exercise: action.exercise, sets: [] },
         ],
+      };
+    case "REMOVE_EXERCISE":
+      return {
+        ...state,
+        exercises: state.exercises.filter(
+          (e) => e.exercise.id !== action.exerciseId,
+        ),
       };
     case "ADD_SET": {
       return {
@@ -128,6 +136,7 @@ export function WorkoutPageClient({
 }: WorkoutPageClientProps) {
   const router = useRouter();
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [completing, setCompleting] = useState(false);
   const debounceTimers = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
   const initialExercises = existingWorkout?.exercises ??
@@ -158,6 +167,27 @@ export function WorkoutPageClient({
       dispatch({ type: "ADD_EXERCISE", exercise });
     },
     [],
+  );
+
+  const handleRemoveExercise = useCallback(
+    async (exerciseId: string) => {
+      const entry = state.exercises.find((e) => e.exercise.id === exerciseId);
+      if (!entry) return;
+
+      // Optimistic remove
+      dispatch({ type: "REMOVE_EXERCISE", exerciseId });
+
+      // Delete all sets from DB in background
+      const realSetIds = entry.sets
+        .map((s) => s.id)
+        .filter((id) => !id.startsWith("temp-"));
+      const results = await Promise.all(realSetIds.map((id) => deleteSet(id)));
+      const failed = results.some((r) => !r.success);
+      if (failed) {
+        toast.error("Some sets failed to delete");
+      }
+    },
+    [state.exercises],
   );
 
   const handleAddSet = useCallback(
@@ -320,10 +350,20 @@ export function WorkoutPageClient({
   );
 
   const handleDone = async () => {
-    if (state.log) {
-      await completeWorkout(state.log.id);
+    if (!state.log || completing) return;
+    setCompleting(true);
+    try {
+      const result = await completeWorkout(state.log.id);
+      if (!result.success) {
+        toast.error("Failed to complete workout");
+        setCompleting(false);
+        return;
+      }
+      router.push("/dashboard");
+    } catch {
+      toast.error("Failed to complete workout");
+      setCompleting(false);
     }
-    router.push("/dashboard");
   };
 
   const workoutDate = getWorkoutDate();
@@ -348,9 +388,10 @@ export function WorkoutPageClient({
         </div>
         <button
           onClick={handleDone}
-          className="rounded-full bg-fp-accent px-4 py-1.5 font-manrope text-sm font-semibold text-fp-text-on-accent"
+          disabled={completing}
+          className="rounded-full bg-fp-accent px-4 py-1.5 font-manrope text-sm font-semibold text-fp-text-on-accent disabled:opacity-60"
         >
-          Done
+          {completing ? "Completing..." : "Done"}
         </button>
       </div>
 
@@ -366,6 +407,7 @@ export function WorkoutPageClient({
           onUpdateReps={handleUpdateReps}
           onToggleWarmup={handleToggleWarmup}
           onDeleteSet={handleDeleteSet}
+          onRemoveExercise={() => handleRemoveExercise(entry.exercise.id)}
         />
       ))}
 

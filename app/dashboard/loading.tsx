@@ -12,6 +12,9 @@ export default function DashboardLoading() {
         </div>
       </div>
 
+      {/* Stats container skeleton */}
+      <Skeleton className="h-36 w-full rounded-2xl" />
+
       {/* Today card skeleton */}
       <Skeleton className="h-52 w-full rounded-2xl" />
 

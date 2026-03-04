@@ -27,9 +27,11 @@ export function BestLifts({ lifts }: { lifts: BestLift[] }) {
           <Dumbbell className="h-5 w-5 text-fp-accent" />
           <div className="text-center">
             <p className="font-space-grotesk text-[28px] font-bold text-fp-text-primary">
-              {Math.round(toDisplayWeight(lift.estimated1RM))}
+              {Math.round(toDisplayWeight(lift.weight))}
             </p>
-            <p className="text-xs text-fp-text-tertiary">{unitLabel}</p>
+            <p className="text-xs text-fp-text-tertiary">
+              {unitLabel} &times; {lift.reps} {lift.reps === 1 ? "rep" : "reps"}
+            </p>
             <p className="mt-1 text-xs text-fp-text-tertiary">
               {lift.exercise.name}
             </p>

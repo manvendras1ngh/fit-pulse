@@ -106,29 +106,28 @@ export async function getBestLifts(limit: number = 3): Promise<BestLift[]> {
 
   if (!sets || sets.length === 0) return [];
 
-  // Find best 1RM per exercise
+  // Find heaviest weight lifted per exercise
   const bestByExercise = new Map<
     string,
-    { exercise: Exercise; estimated1RM: number; weight: number; reps: number }
+    { exercise: Exercise; weight: number; reps: number }
   >();
 
   for (const set of sets) {
     const exercise = set.exercise as unknown as Exercise;
     if (!exercise) continue;
-    const estimated1RM = Number(set.weight) * (1 + set.reps / 30);
+    const weight = Number(set.weight);
     const current = bestByExercise.get(set.exercise_id);
-    if (!current || estimated1RM > current.estimated1RM) {
+    if (!current || weight > current.weight) {
       bestByExercise.set(set.exercise_id, {
         exercise,
-        estimated1RM: Math.round(estimated1RM * 100) / 100,
-        weight: Number(set.weight),
+        weight,
         reps: set.reps,
       });
     }
   }
 
   return Array.from(bestByExercise.values())
-    .sort((a, b) => b.estimated1RM - a.estimated1RM)
+    .sort((a, b) => b.weight - a.weight)
     .slice(0, limit);
 }
 

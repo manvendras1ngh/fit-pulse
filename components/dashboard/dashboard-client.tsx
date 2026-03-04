@@ -1,14 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { TodaySummary } from "./today-summary";
+import { TodaySummary, MOTIVATIONAL_MESSAGES } from "./today-summary";
 import { WeeklySummary } from "./weekly-summary";
 import { LevelBadge } from "./level-badge";
 import { computeLevel } from "@/lib/utils/level";
 import { getWorkoutDate, getTodayDayOfWeek } from "@/lib/utils/workout-date";
+import { useUnit } from "@/lib/contexts/unit-context";
 import type {
   Profile,
   WorkoutLog,
+  WorkoutLogWithSets,
   Exercise,
   PlanDayExercise,
   WorkoutPlan,
@@ -22,7 +24,7 @@ interface DashboardClientProps {
     workoutDate: string,
     dayOfWeek: number,
   ) => Promise<{
-    todayWorkout: WorkoutLog | null;
+    todayWorkout: WorkoutLogWithSets | null;
     todayPlanDay:
       | (WorkoutPlanDay & {
           exercises: (PlanDayExercise & { exercise: Exercise })[];
@@ -40,7 +42,7 @@ export function DashboardClient({
   fetchData,
 }: DashboardClientProps) {
   const [data, setData] = useState<{
-    todayWorkout: WorkoutLog | null;
+    todayWorkout: WorkoutLogWithSets | null;
     todayPlanDay:
       | (WorkoutPlanDay & {
           exercises: (PlanDayExercise & { exercise: Exercise })[];
@@ -59,6 +61,8 @@ export function DashboardClient({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const { toDisplayWeight, unitLabel } = useUnit();
+
   const level = computeLevel(
     data?.workoutCount ?? 0,
     false,
@@ -66,6 +70,22 @@ export function DashboardClient({
   );
 
   const firstName = profile.name?.split(" ")[0] ?? "there";
+
+  // Stat card computations
+  const todayWorkout = data?.todayWorkout ?? null;
+
+  const bestSetWeight = todayWorkout
+    ? todayWorkout.exercises.reduce(
+        (max, e) =>
+          Math.max(
+            max,
+            ...e.sets.map((set) => Number(set.weight)),
+          ),
+        0,
+      )
+    : null;
+
+  const quote = MOTIVATIONAL_MESSAGES[new Date().getDay()];
 
   return (
     <div className="mx-auto flex max-w-lg flex-col gap-6 p-5">
@@ -79,6 +99,43 @@ export function DashboardClient({
             Hey, {firstName}
           </span>
           <LevelBadge level={level} />
+        </div>
+      </div>
+
+      {/* Stats Container */}
+      <div className="rounded-2xl border border-fp-border bg-fp-bg-card p-5">
+        <p className="mb-3 font-space-mono text-[13px] text-fp-accent">
+          &ldquo;{quote}&rdquo;
+        </p>
+        <div className="grid grid-cols-3 gap-3">
+          <div className="rounded-xl bg-fp-bg-elevated p-3">
+            <p className="font-space-grotesk text-lg font-bold text-fp-text-primary">
+              {data
+                ? `${toDisplayWeight(data.weeklySummary.totalVolume).toLocaleString()}`
+                : "\u2014"}
+            </p>
+            <p className="font-space-mono text-[11px] tracking-[0.5px] text-fp-text-tertiary">
+              {unitLabel}/WEEK
+            </p>
+          </div>
+          <div className="rounded-xl bg-fp-bg-elevated p-3">
+            <p className="font-space-grotesk text-lg font-bold text-fp-text-primary">
+              {data?.workoutCount ?? 0}
+            </p>
+            <p className="font-space-mono text-[11px] tracking-[0.5px] text-fp-text-tertiary">
+              TOTAL DAYS
+            </p>
+          </div>
+          <div className="rounded-xl bg-fp-bg-elevated p-3">
+            <p className="font-space-grotesk text-lg font-bold text-fp-text-primary">
+              {bestSetWeight !== null && bestSetWeight > 0
+                ? `${toDisplayWeight(bestSetWeight)} ${unitLabel}`
+                : "\u2014"}
+            </p>
+            <p className="font-space-mono text-[11px] tracking-[0.5px] text-fp-text-tertiary">
+              BEST SET
+            </p>
+          </div>
         </div>
       </div>
 

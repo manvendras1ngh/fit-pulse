@@ -106,7 +106,6 @@ export interface WeeklySummary {
 
 export interface BestLift {
   exercise: Exercise;
-  estimated1RM: number;
   weight: number;
   reps: number;
 }
