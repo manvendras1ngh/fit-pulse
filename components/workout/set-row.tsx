@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useRef, useEffect } from "react";
 import { Trash2, Flame } from "lucide-react";
 import { useUnit } from "@/lib/contexts/unit-context";
 import type { WorkoutSet } from "@/lib/types";
@@ -23,6 +24,15 @@ export function SetRow({
 }: SetRowProps) {
   const { unitLabel, toDisplayWeight, toStorageWeight } = useUnit();
   const displayWeight = set.weight ? toDisplayWeight(set.weight) : 0;
+  const [weightText, setWeightText] = useState(displayWeight ? String(displayWeight) : "");
+  const isFocused = useRef(false);
+
+  // Sync from props only when not focused (external updates)
+  useEffect(() => {
+    if (!isFocused.current) {
+      setWeightText(displayWeight ? String(displayWeight) : "");
+    }
+  }, [displayWeight]);
 
   return (
     <div
@@ -37,14 +47,24 @@ export function SetRow({
       <input
         type="text"
         inputMode="decimal"
-        value={displayWeight || ""}
+        value={weightText}
+        onFocus={() => { isFocused.current = true; }}
+        onBlur={() => {
+          isFocused.current = false;
+          // Clean up trailing dot on blur
+          setWeightText(displayWeight ? String(displayWeight) : "");
+        }}
         onChange={(e) => {
           const raw = e.target.value.replace(/[^0-9.]/g, "");
-          if (raw === "") {
+          // Prevent multiple dots
+          const parts = raw.split(".");
+          const sanitized = parts.length > 2 ? parts[0] + "." + parts.slice(1).join("") : raw;
+          setWeightText(sanitized);
+          if (sanitized === "" || sanitized === ".") {
             onUpdateWeight(0);
             return;
           }
-          const val = parseFloat(raw);
+          const val = parseFloat(sanitized);
           if (!isNaN(val) && val >= 0 && val <= 9999) {
             onUpdateWeight(toStorageWeight(val));
           }

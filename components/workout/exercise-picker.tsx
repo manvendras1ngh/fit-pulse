@@ -89,7 +89,7 @@ export function ExercisePicker({
     debounceRef.current = setTimeout(() => fetchExercises(value), 250);
   };
 
-  const handleCreate = async (name: string, muscle: MuscleGroup) => {
+  const handleCreate = async (name: string, muscle: MuscleGroup | null) => {
     if (!name.trim() || creating) return;
     setCreating(true);
     try {
@@ -162,7 +162,7 @@ export function ExercisePicker({
         {/* Inline create from search — shown when search has text and no exact match */}
         {search.trim() && !hasExactMatch && (
           <button
-            onClick={() => handleCreate(search, "full_body")}
+            onClick={() => handleCreate(search, null)}
             disabled={creating}
             className="mx-4 mb-2 flex items-center gap-2 rounded-lg bg-fp-bg-elevated px-3 py-2 text-left text-sm text-fp-accent hover:bg-fp-bg-card disabled:opacity-60"
           >

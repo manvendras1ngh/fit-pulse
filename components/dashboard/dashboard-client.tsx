@@ -74,6 +74,18 @@ export function DashboardClient({
   // Stat card computations
   const todayWorkout = data?.todayWorkout ?? null;
 
+  const todayVolume = todayWorkout
+    ? todayWorkout.exercises.reduce(
+        (sum, e) =>
+          sum +
+          e.sets.reduce(
+            (s, set) => s + Number(set.reps) * Number(set.weight),
+            0,
+          ),
+        0,
+      )
+    : null;
+
   const bestSetWeight = todayWorkout
     ? todayWorkout.exercises.reduce(
         (max, e) =>
@@ -110,12 +122,12 @@ export function DashboardClient({
         <div className="grid grid-cols-3 gap-3">
           <div className="rounded-xl bg-fp-bg-elevated p-3">
             <p className="font-space-grotesk text-lg font-bold text-fp-text-primary">
-              {data
-                ? `${toDisplayWeight(data.weeklySummary.totalVolume).toLocaleString()}`
+              {todayVolume !== null && todayVolume > 0
+                ? toDisplayWeight(todayVolume).toLocaleString()
                 : "\u2014"}
             </p>
             <p className="font-space-mono text-[11px] tracking-[0.5px] text-fp-text-tertiary">
-              {unitLabel}/WEEK
+              VOLUME ({unitLabel})
             </p>
           </div>
           <div className="rounded-xl bg-fp-bg-elevated p-3">

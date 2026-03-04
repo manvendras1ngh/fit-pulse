@@ -6,7 +6,7 @@ import type { MuscleGroup, ExerciseType } from "@/lib/types";
 
 export async function createCustomExercise(
   name: string,
-  muscleGroup: MuscleGroup,
+  muscleGroup: MuscleGroup | null,
   type: ExerciseType = "strength",
 ) {
   const supabase = await createClient();
@@ -38,6 +38,26 @@ export async function softDeleteExercise(exerciseId: string) {
   const { error } = await supabase
     .from("exercises")
     .update({ is_deleted: true })
+    .eq("id", exerciseId)
+    .eq("user_id", user.id);
+
+  if (error) return { success: false, error: error.message };
+
+  revalidatePath("/dashboard/workout");
+  return { success: true };
+}
+
+export async function updateExerciseMuscleGroup(
+  exerciseId: string,
+  muscleGroup: MuscleGroup | null,
+) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { success: false, error: "Not authenticated" };
+
+  const { error } = await supabase
+    .from("exercises")
+    .update({ muscle_group: muscleGroup })
     .eq("id", exerciseId)
     .eq("user_id", user.id);
 

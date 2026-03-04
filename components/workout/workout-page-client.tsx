@@ -35,6 +35,7 @@ type WorkoutAction =
   | { type: "INSERT_SET_AT"; exerciseId: string; set: WorkoutSet; index: number }
   | { type: "UPDATE_SET"; setId: string; updates: Partial<WorkoutSet> }
   | { type: "DELETE_SET"; setId: string }
+  | { type: "UPDATE_EXERCISE"; exercise: Exercise }
   | { type: "SET_ERROR"; setId: string }
   | { type: "CLEAR_ERROR"; setId: string };
 
@@ -103,6 +104,15 @@ function workoutReducer(state: WorkoutState, action: WorkoutAction): WorkoutStat
           ...e,
           sets: e.sets.filter((s) => s.id !== action.setId),
         })),
+      };
+    case "UPDATE_EXERCISE":
+      return {
+        ...state,
+        exercises: state.exercises.map((e) =>
+          e.exercise.id === action.exercise.id
+            ? { ...e, exercise: action.exercise }
+            : e,
+        ),
       };
     case "SET_ERROR": {
       const newErrors = new Set(state.errorSetIds);
@@ -408,6 +418,7 @@ export function WorkoutPageClient({
           onToggleWarmup={handleToggleWarmup}
           onDeleteSet={handleDeleteSet}
           onRemoveExercise={() => handleRemoveExercise(entry.exercise.id)}
+          onExerciseUpdate={(ex) => dispatch({ type: "UPDATE_EXERCISE", exercise: ex })}
         />
       ))}
 
