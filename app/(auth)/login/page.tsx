@@ -1,8 +1,9 @@
 "use client";
 
-import { Activity } from "lucide-react";
+import { Activity, ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { Suspense } from "react";
 
 function LoginContent() {
@@ -20,7 +21,13 @@ function LoginContent() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center bg-fp-bg-page px-6">
+    <div className="relative flex min-h-screen flex-col items-center bg-fp-bg-page px-6">
+      <Link
+        href="/"
+        className="absolute left-5 top-6 flex h-9 w-9 items-center justify-center rounded-xl border border-fp-border bg-fp-bg-card text-fp-text-secondary transition-colors hover:text-fp-text-primary"
+      >
+        <ArrowLeft className="h-4 w-4" />
+      </Link>
       <div className="flex flex-1 w-full max-w-[340px] flex-col items-center justify-center gap-8">
         {/* Logo */}
         <div className="flex flex-col items-center gap-4">

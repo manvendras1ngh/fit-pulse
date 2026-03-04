@@ -24,23 +24,23 @@ export function LandingHeader() {
         </Link>
         <nav className="hidden items-center gap-8 md:flex">
           <a
-            href="#features"
+            href="/#features"
             className="py-3 font-manrope text-[15px] font-medium text-fp-text-secondary transition-colors hover:text-fp-text-primary"
           >
             Features
           </a>
-          <a
-            href="#how-it-works"
+          <Link
+            href="/about"
             className="py-3 font-manrope text-[15px] font-medium text-fp-text-secondary transition-colors hover:text-fp-text-primary"
           >
-            How It Works
-          </a>
-          <a
-            href="#testimonials"
+            About
+          </Link>
+          <Link
+            href="/privacy"
             className="py-3 font-manrope text-[15px] font-medium text-fp-text-secondary transition-colors hover:text-fp-text-primary"
           >
-            Testimonials
-          </a>
+            Privacy
+          </Link>
           <Link
             href="/login"
             className="rounded-full bg-fp-accent px-5 py-2.5 font-manrope text-sm font-semibold text-fp-text-on-accent transition-opacity hover:opacity-90"
@@ -66,26 +66,26 @@ export function LandingHeader() {
             <SheetTitle className="sr-only">Navigation</SheetTitle>
             <nav className="mt-8 flex flex-col gap-2">
               <a
-                href="#features"
+                href="/#features"
                 onClick={() => setOpen(false)}
                 className="rounded-lg px-4 py-3 text-[15px] font-medium text-fp-text-secondary transition-colors hover:bg-fp-bg-card hover:text-fp-text-primary"
               >
                 Features
               </a>
-              <a
-                href="#how-it-works"
+              <Link
+                href="/about"
                 onClick={() => setOpen(false)}
                 className="rounded-lg px-4 py-3 text-[15px] font-medium text-fp-text-secondary transition-colors hover:bg-fp-bg-card hover:text-fp-text-primary"
               >
-                How It Works
-              </a>
-              <a
-                href="#testimonials"
+                About
+              </Link>
+              <Link
+                href="/privacy"
                 onClick={() => setOpen(false)}
                 className="rounded-lg px-4 py-3 text-[15px] font-medium text-fp-text-secondary transition-colors hover:bg-fp-bg-card hover:text-fp-text-primary"
               >
-                Testimonials
-              </a>
+                Privacy
+              </Link>
               <div className="mt-4 px-4">
                 <Link
                   href="/login"
