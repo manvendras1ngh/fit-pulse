@@ -27,6 +27,7 @@ export function ExercisePicker({
   excludeIds = [],
 }: ExercisePickerProps) {
   const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [excludedMatches, setExcludedMatches] = useState<Exercise[]>([]);
   const [search, setSearch] = useState("");
   const [showCreate, setShowCreate] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -49,11 +50,9 @@ export function ExercisePicker({
       }
 
       const { data } = await q.limit(30);
-      setExercises(
-        (data ?? []).filter(
-          (e: Exercise) => !excludeIds.includes(e.id),
-        ) as Exercise[],
-      );
+      const all = (data ?? []) as Exercise[];
+      setExercises(all.filter((e) => !excludeIds.includes(e.id)));
+      setExcludedMatches(all.filter((e) => excludeIds.includes(e.id)));
     },
     [excludeIds],
   );
@@ -68,11 +67,9 @@ export function ExercisePicker({
       .order("name")
       .limit(30)
       .then(({ data }) => {
-        setExercises(
-          (data ?? []).filter(
-            (e: Exercise) => !excludeIds.includes(e.id),
-          ) as Exercise[],
-        );
+        const all = (data ?? []) as Exercise[];
+        setExercises(all.filter((e) => !excludeIds.includes(e.id)));
+        setExcludedMatches(all.filter((e) => excludeIds.includes(e.id)));
       });
   }, [open, excludeIds]);
 
@@ -112,8 +109,10 @@ export function ExercisePicker({
   };
 
   // Check if search text has an exact match in existing exercises
-  const hasExactMatch = search.trim() !== "" && exercises.some(
-    (ex) => ex.name.toLowerCase() === search.trim().toLowerCase(),
+  const searchLower = search.trim().toLowerCase();
+  const hasExactMatch = searchLower !== "" && (
+    exercises.some((ex) => ex.name.toLowerCase() === searchLower) ||
+    excludedMatches.some((ex) => ex.name.toLowerCase() === searchLower)
   );
 
   // Group by muscle group
@@ -177,6 +176,16 @@ export function ExercisePicker({
 
         {/* Exercise List */}
         <div className="flex-1 overflow-y-auto px-4 pb-6">
+          {Object.keys(grouped).length === 0 && excludedMatches.length === 0 && search.trim() && (
+            <p className="py-8 text-center text-sm text-fp-text-tertiary">
+              No exercises found
+            </p>
+          )}
+          {Object.keys(grouped).length === 0 && excludedMatches.length > 0 && search.trim() && (
+            <p className="py-8 text-center text-sm text-fp-text-tertiary">
+              Already in workout
+            </p>
+          )}
           {Object.entries(grouped).map(([group, exs]) => (
             <div key={group} className="mb-4">
               <p className="mb-2 font-space-mono text-[11px] font-medium uppercase tracking-wider text-fp-text-tertiary">

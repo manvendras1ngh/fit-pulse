@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { getLastSessionSets, type HistoricalSet } from "@/lib/queries/workouts";
 
 export async function startWorkout(
   workoutDate: string,
@@ -72,6 +73,7 @@ export async function updateSet(
     weight?: number;
     reps?: number;
     is_warmup?: boolean;
+    is_completed?: boolean;
   },
 ) {
   const supabase = await createClient();
@@ -145,4 +147,10 @@ export async function updateWorkoutLog(
 
   revalidatePath("/dashboard/workout");
   return { success: true };
+}
+
+export async function getExerciseHistory(
+  exerciseId: string,
+): Promise<HistoricalSet[]> {
+  return getLastSessionSets(exerciseId);
 }

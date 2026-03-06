@@ -136,10 +136,16 @@ export async function getWorkoutCount(): Promise<number> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return 0;
 
-  const { count } = await supabase
+  const { data } = await supabase
     .from("workout_logs")
-    .select("*", { count: "exact", head: true })
-    .eq("user_id", user.id);
+    .select("id, workout_sets(id)")
+    .eq("user_id", user.id)
+    .not("completed_at", "is", null);
 
-  return count ?? 0;
+  // Only count workouts that have at least one set
+  const count = (data ?? []).filter(
+    (log) => Array.isArray(log.workout_sets) && log.workout_sets.length > 0,
+  ).length;
+
+  return count;
 }

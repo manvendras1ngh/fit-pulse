@@ -1,7 +1,8 @@
 "use client";
 
-import { useReducer, useCallback, useState, useEffect, useRef } from "react";
+import { useReducer, useCallback, useState, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { Plus } from "lucide-react";
 import { ExerciseCard } from "./exercise-card";
 import { ExercisePicker } from "./exercise-picker";
 import {
@@ -10,9 +11,20 @@ import {
   updateSet,
   deleteSet,
   completeWorkout,
+  getExerciseHistory,
 } from "@/lib/actions/workouts";
 import { getWorkoutDate } from "@/lib/utils/workout-date";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import type { Exercise, WorkoutLog, WorkoutSet } from "@/lib/types";
 
 interface ExerciseWithSets {
@@ -102,7 +114,9 @@ function workoutReducer(state: WorkoutState, action: WorkoutAction): WorkoutStat
         ...state,
         exercises: state.exercises.map((e) => ({
           ...e,
-          sets: e.sets.filter((s) => s.id !== action.setId),
+          sets: e.sets
+            .filter((s) => s.id !== action.setId)
+            .map((s, i) => ({ ...s, set_number: i + 1 })),
         })),
       };
     case "UPDATE_EXERCISE":
@@ -147,6 +161,7 @@ export function WorkoutPageClient({
   const router = useRouter();
   const [pickerOpen, setPickerOpen] = useState(false);
   const [completing, setCompleting] = useState(false);
+  const [showEmptyConfirm, setShowEmptyConfirm] = useState(false);
   const debounceTimers = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
   const initialExercises = existingWorkout?.exercises ??
@@ -172,11 +187,111 @@ export function WorkoutPageClient({
     }
   }, [state.log, planId, dayName]);
 
-  const handleAddExercise = useCallback(
-    (exercise: Exercise) => {
-      dispatch({ type: "ADD_EXERCISE", exercise });
+  const handleAddSet = useCallback(
+    async (exerciseId: string, defaultWeight?: number, defaultReps?: number) => {
+      if (!state.log) return;
+
+      const exerciseEntry = state.exercises.find(
+        (e) => e.exercise.id === exerciseId,
+      );
+      const setNumber = (exerciseEntry?.sets.length ?? 0) + 1;
+      const lastSet = exerciseEntry?.sets.at(-1);
+      const weight = defaultWeight ?? lastSet?.weight ?? 0;
+      const reps = defaultReps ?? lastSet?.reps ?? 1;
+
+      // Optimistic: create a temp set
+      const tempId = `temp-${Date.now()}-${setNumber}`;
+      const tempSet: WorkoutSet = {
+        id: tempId,
+        workout_log_id: state.log.id,
+        user_id: state.log.user_id,
+        exercise_id: exerciseId,
+        set_number: setNumber,
+        weight,
+        reps,
+        is_warmup: false,
+        is_completed: false,
+        created_at: new Date().toISOString(),
+      };
+
+      dispatch({ type: "ADD_SET", exerciseId, set: tempSet });
+
+      const result = await addSet(
+        state.log.id,
+        exerciseId,
+        setNumber,
+        weight,
+        reps,
+      );
+
+      if (result.success && result.data) {
+        // Replace temp with real
+        dispatch({
+          type: "UPDATE_SET",
+          setId: tempId,
+          updates: {
+            id: (result.data as WorkoutSet).id,
+          },
+        });
+      } else {
+        dispatch({ type: "DELETE_SET", setId: tempId });
+        toast.error("Failed to add set");
+      }
     },
-    [],
+    [state.log, state.exercises],
+  );
+
+  const handleAddExercise = useCallback(
+    async (exercise: Exercise) => {
+      if (!state.log) return;
+      dispatch({ type: "ADD_EXERCISE", exercise });
+
+      // Fetch history and auto-populate sets
+      const history = await getExerciseHistory(exercise.id);
+      if (history.length > 0) {
+        for (let i = 0; i < history.length; i++) {
+          const h = history[i];
+          const setNumber = i + 1;
+
+          const tempId = `temp-${Date.now()}-${setNumber}`;
+          const tempSet: WorkoutSet = {
+            id: tempId,
+            workout_log_id: state.log.id,
+            user_id: state.log.user_id,
+            exercise_id: exercise.id,
+            set_number: setNumber,
+            weight: h.weight,
+            reps: h.reps,
+            is_warmup: h.is_warmup,
+            is_completed: false,
+            created_at: new Date().toISOString(),
+          };
+
+          dispatch({ type: "ADD_SET", exerciseId: exercise.id, set: tempSet });
+
+          const result = await addSet(
+            state.log.id,
+            exercise.id,
+            setNumber,
+            h.weight,
+            h.reps,
+            h.is_warmup,
+          );
+
+          if (result.success && result.data) {
+            dispatch({
+              type: "UPDATE_SET",
+              setId: tempId,
+              updates: { id: (result.data as WorkoutSet).id },
+            });
+          } else {
+            dispatch({ type: "DELETE_SET", setId: tempId });
+            toast.error("Failed to add set");
+          }
+        }
+      }
+    },
+    [state.log],
   );
 
   const handleRemoveExercise = useCallback(
@@ -198,56 +313,6 @@ export function WorkoutPageClient({
       }
     },
     [state.exercises],
-  );
-
-  const handleAddSet = useCallback(
-    async (exerciseId: string) => {
-      if (!state.log) return;
-
-      const exerciseEntry = state.exercises.find(
-        (e) => e.exercise.id === exerciseId,
-      );
-      const setNumber = (exerciseEntry?.sets.length ?? 0) + 1;
-
-      // Optimistic: create a temp set
-      const tempId = `temp-${Date.now()}`;
-      const tempSet: WorkoutSet = {
-        id: tempId,
-        workout_log_id: state.log.id,
-        user_id: state.log.user_id,
-        exercise_id: exerciseId,
-        set_number: setNumber,
-        weight: 0,
-        reps: 1,
-        is_warmup: false,
-        created_at: new Date().toISOString(),
-      };
-
-      dispatch({ type: "ADD_SET", exerciseId, set: tempSet });
-
-      const result = await addSet(
-        state.log.id,
-        exerciseId,
-        setNumber,
-        0,
-        1, // Default 1 rep to satisfy DB constraint
-      );
-
-      if (result.success && result.data) {
-        // Replace temp with real
-        dispatch({
-          type: "UPDATE_SET",
-          setId: tempId,
-          updates: {
-            id: (result.data as WorkoutSet).id,
-          },
-        });
-      } else {
-        dispatch({ type: "DELETE_SET", setId: tempId });
-        toast.error("Failed to add set");
-      }
-    },
-    [state.log, state.exercises],
   );
 
   const handleUpdateWeight = useCallback(
@@ -331,6 +396,44 @@ export function WorkoutPageClient({
     [state.exercises],
   );
 
+  const handleLockExercise = useCallback(
+    async (exerciseId: string) => {
+      const entry = state.exercises.find((e) => e.exercise.id === exerciseId);
+      if (!entry || entry.sets.length === 0) return;
+
+      const allCompleted = entry.sets.every((s) => s.is_completed);
+      const newCompleted = !allCompleted;
+
+      // Optimistic: update all sets
+      for (const s of entry.sets) {
+        dispatch({
+          type: "UPDATE_SET",
+          setId: s.id,
+          updates: { is_completed: newCompleted },
+        });
+      }
+
+      // Server: update real sets
+      const realSets = entry.sets.filter((s) => !s.id.startsWith("temp-"));
+      const results = await Promise.all(
+        realSets.map((s) => updateSet(s.id, { is_completed: newCompleted })),
+      );
+
+      if (results.some((r) => !r.success)) {
+        // Revert all sets
+        for (const s of entry.sets) {
+          dispatch({
+            type: "UPDATE_SET",
+            setId: s.id,
+            updates: { is_completed: !newCompleted },
+          });
+        }
+        toast.error("Failed to update completion");
+      }
+    },
+    [state.exercises],
+  );
+
   const handleDeleteSet = useCallback(
     async (setId: string) => {
       const exerciseEntry = state.exercises.find((e) =>
@@ -359,7 +462,7 @@ export function WorkoutPageClient({
     [state.exercises],
   );
 
-  const handleDone = async () => {
+  const finishWorkout = async () => {
     if (!state.log || completing) return;
     setCompleting(true);
     try {
@@ -376,18 +479,40 @@ export function WorkoutPageClient({
     }
   };
 
+  const handleDone = () => {
+    const totalSets = state.exercises.reduce((sum, e) => sum + e.sets.length, 0);
+    if (totalSets === 0) {
+      setShowEmptyConfirm(true);
+      return;
+    }
+    finishWorkout();
+  };
+
   const workoutDate = getWorkoutDate();
   const formattedDate = new Date(workoutDate + "T00:00:00").toLocaleDateString(
     "en-US",
     { month: "long", day: "numeric" },
   );
 
+  const sortedExercises = useMemo(() => {
+    const incomplete: ExerciseWithSets[] = [];
+    const completed: ExerciseWithSets[] = [];
+    for (const entry of state.exercises) {
+      if (entry.sets.length > 0 && entry.sets.every((s) => s.is_completed)) {
+        completed.push(entry);
+      } else {
+        incomplete.push(entry);
+      }
+    }
+    return [...incomplete, ...completed];
+  }, [state.exercises]);
+
   const subtitle = dayName
     ? `${dayName} — ${formattedDate}`
     : `Freestyle Workout — ${formattedDate}`;
 
   return (
-    <div className="mx-auto flex max-w-lg flex-col gap-4 p-5">
+    <div className="mx-auto flex max-w-lg flex-col gap-4 md:gap-5 p-5">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -399,35 +524,41 @@ export function WorkoutPageClient({
         <button
           onClick={handleDone}
           disabled={completing}
-          className="rounded-full bg-fp-accent px-4 py-1.5 font-manrope text-sm font-semibold text-fp-text-on-accent disabled:opacity-60"
+          className="h-11 rounded-md bg-fp-accent px-4 font-manrope text-sm font-semibold text-fp-text-on-accent disabled:opacity-60"
         >
           {completing ? "Completing..." : "Done"}
         </button>
       </div>
 
       {/* Exercise Cards */}
-      {state.exercises.map((entry) => (
-        <ExerciseCard
-          key={entry.exercise.id}
-          exercise={entry.exercise}
-          sets={entry.sets}
-          errorSetIds={state.errorSetIds}
-          onAddSet={() => handleAddSet(entry.exercise.id)}
-          onUpdateWeight={handleUpdateWeight}
-          onUpdateReps={handleUpdateReps}
-          onToggleWarmup={handleToggleWarmup}
-          onDeleteSet={handleDeleteSet}
-          onRemoveExercise={() => handleRemoveExercise(entry.exercise.id)}
-          onExerciseUpdate={(ex) => dispatch({ type: "UPDATE_EXERCISE", exercise: ex })}
-        />
-      ))}
+      {sortedExercises.map((entry) => {
+        const isLocked = entry.sets.length > 0 && entry.sets.every((s) => s.is_completed);
+        return (
+          <ExerciseCard
+            key={entry.exercise.id}
+            exercise={entry.exercise}
+            sets={entry.sets}
+            errorSetIds={state.errorSetIds}
+            isLocked={isLocked}
+            onAddSet={() => handleAddSet(entry.exercise.id)}
+            onUpdateWeight={handleUpdateWeight}
+            onUpdateReps={handleUpdateReps}
+            onToggleWarmup={handleToggleWarmup}
+            onLockExercise={() => handleLockExercise(entry.exercise.id)}
+            onDeleteSet={handleDeleteSet}
+            onRemoveExercise={() => handleRemoveExercise(entry.exercise.id)}
+            onExerciseUpdate={(ex) => dispatch({ type: "UPDATE_EXERCISE", exercise: ex })}
+          />
+        );
+      })}
 
       {/* Add Exercise */}
       <button
         onClick={() => setPickerOpen(true)}
-        className="flex h-11 w-full items-center justify-center rounded-xl border border-fp-border-muted text-sm font-medium text-fp-text-secondary hover:bg-fp-bg-card"
+        className="flex h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-fp-border-muted text-sm font-medium text-fp-text-tertiary hover:bg-fp-bg-card"
       >
-        + Add Exercise
+        <Plus className="h-4 w-4" />
+        Add Exercise
       </button>
 
       <ExercisePicker
@@ -436,6 +567,23 @@ export function WorkoutPageClient({
         onSelect={handleAddExercise}
         excludeIds={state.exercises.map((e) => e.exercise.id)}
       />
+
+      <AlertDialog open={showEmptyConfirm} onOpenChange={setShowEmptyConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Complete Empty Workout?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You haven&apos;t logged any sets yet. Are you sure you want to finish?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep Working Out</AlertDialogCancel>
+            <AlertDialogAction onClick={finishWorkout}>
+              Finish Anyway
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -80,6 +80,7 @@ export interface WorkoutSet {
   weight: number;
   reps: number;
   is_warmup: boolean;
+  is_completed: boolean;
   created_at: string;
 }
 
@@ -244,6 +245,7 @@ export interface Database {
           weight: number;
           reps: number;
           is_warmup?: boolean;
+          is_completed?: boolean;
           created_at?: string;
         };
         Update: {
@@ -255,6 +257,7 @@ export interface Database {
           weight?: number;
           reps?: number;
           is_warmup?: boolean;
+          is_completed?: boolean;
           created_at?: string;
         };
         Relationships: [];
