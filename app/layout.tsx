@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Space_Grotesk, Manrope, Space_Mono } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
+import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
@@ -38,6 +40,8 @@ export default function RootLayout({
         className={`${spaceGrotesk.variable} ${manrope.variable} ${spaceMono.variable} font-manrope antialiased`}
       >
         {children}
+        <Analytics />
+        <SpeedInsights />
         <Toaster
           position="top-center"
           theme="dark"
