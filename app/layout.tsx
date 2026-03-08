@@ -27,6 +27,9 @@ export const metadata: Metadata = {
   title: "FitPulse — Log fast. Lift heavier.",
   description:
     "Track your gym workouts, plan your splits, and watch your progress over time.",
+  verification: {
+    google: "GPe8_hhik0C-6k6JLP9wuy-c1FfuipjMN7BUbKUayJE",
+  },
 };
 
 export default function RootLayout({
