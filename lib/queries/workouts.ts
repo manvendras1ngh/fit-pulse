@@ -108,7 +108,7 @@ export async function getRecentWorkouts(
   // Only include workouts that have at least one set
   return (data ?? [])
     .filter((log) => Array.isArray(log.workout_sets) && log.workout_sets.length > 0)
-    .map(({ workout_sets: _, ...log }) => log) as WorkoutLog[];
+    .map(({ workout_sets: _sets, ...log }) => log) as WorkoutLog[];
 }
 
 export async function getWeeklySummary(
@@ -142,7 +142,8 @@ export async function getWeeklySummary(
   const { data: sets } = await supabase
     .from("workout_sets")
     .select("weight, reps")
-    .in("workout_log_id", logIds);
+    .in("workout_log_id", logIds)
+    .eq("is_warmup", false);
 
   let totalVolume = 0;
   let totalSets = 0;

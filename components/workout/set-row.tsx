@@ -164,7 +164,7 @@ export function SetRow({
         <span className="font-manrope text-xs text-fp-text-tertiary">{unitLabel}</span>
 
         {/* Separator */}
-        <span className="font-manrope text-sm text-fp-border-muted">&times;</span>
+        <span className="font-manrope text-sm text-fp-text-tertiary">&times;</span>
 
         {/* Reps input */}
         <input
@@ -204,7 +204,7 @@ export function SetRow({
           title="Warmup set"
         >
           <span className={`font-space-mono text-[11px] font-bold ${
-            set.is_warmup ? "text-amber-500" : "text-fp-border-muted"
+            set.is_warmup ? "text-amber-500" : "text-fp-text-tertiary"
           }`}>
             W
           </span>

@@ -31,6 +31,15 @@ export function ExercisePicker({
   const [newMuscle, setNewMuscle] = useState<MuscleGroup>("chest");
   const debounceRef = useRef<NodeJS.Timeout>(undefined);
   const createFormRef = useRef<HTMLDivElement>(null);
+  const excludeIdsRef = useRef(excludeIds);
+  excludeIdsRef.current = excludeIds;
+
+  // Cleanup debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
 
   const fetchExercises = useCallback(
     async (query: string) => {
@@ -47,10 +56,10 @@ export function ExercisePicker({
 
       const { data } = await q.limit(30);
       const all = (data ?? []) as Exercise[];
-      setExercises(all.filter((e) => !excludeIds.includes(e.id)));
-      setExcludedMatches(all.filter((e) => excludeIds.includes(e.id)));
+      setExercises(all.filter((e) => !excludeIdsRef.current.includes(e.id)));
+      setExcludedMatches(all.filter((e) => excludeIdsRef.current.includes(e.id)));
     },
-    [excludeIds],
+    [],
   );
 
   useEffect(() => {

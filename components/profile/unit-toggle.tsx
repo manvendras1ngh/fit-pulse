@@ -11,10 +11,11 @@ interface UnitToggleProps {
 
 export function UnitToggle({ currentUnit, onToggle }: UnitToggleProps) {
   const handleToggle = async (unit: UnitPreference) => {
+    const previousUnit = currentUnit;
     onToggle(unit);
     const result = await updateProfile({ preferred_unit: unit });
     if (!result.success) {
-      onToggle(currentUnit);
+      onToggle(previousUnit);
       toast.error("Failed to update unit preference");
     }
   };

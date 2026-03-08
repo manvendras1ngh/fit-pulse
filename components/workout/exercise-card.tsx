@@ -104,7 +104,7 @@ export function ExerciseCard({
                 <select
                   value={exercise.muscle_group ?? ""}
                   onChange={(e) => handleMuscleGroupChange(e.target.value)}
-                  className="w-0 min-w-full cursor-pointer appearance-none rounded-md bg-[#27272A] py-1.5 pl-3.5 pr-7.5 font-space-mono text-[11px] text-[#71717A] outline-none"
+                  className="w-0 min-w-full cursor-pointer appearance-none rounded-md bg-fp-bg-elevated py-1.5 pl-3.5 pr-7.5 font-space-mono text-[11px] text-fp-text-tertiary outline-none"
                 >
                   <option value="">set group</option>
                   {MUSCLE_GROUPS.map((mg) => (
@@ -113,10 +113,10 @@ export function ExerciseCard({
                     </option>
                   ))}
                 </select>
-                <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-[#52525B]" />
+                <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-fp-text-tertiary" />
               </div>
             ) : exercise.muscle_group ? (
-              <span className="inline-flex min-w-25 items-center rounded-md bg-[#27272A] px-3.5 py-1.5 font-space-mono text-[11px] text-[#71717A]">
+              <span className="inline-flex min-w-25 items-center rounded-md bg-fp-bg-elevated px-3.5 py-1.5 font-space-mono text-[11px] text-fp-text-tertiary">
                 {exercise.muscle_group}
               </span>
             ) : null}

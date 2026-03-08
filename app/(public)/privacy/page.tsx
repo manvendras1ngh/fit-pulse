@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { ShieldCheck, Mail } from "lucide-react";
 import { LandingHeader } from "@/components/landing/header";
 import { Footer } from "@/components/landing/footer";
@@ -44,6 +45,13 @@ function Highlight({ children }: { children: React.ReactNode }) {
     </p>
   );
 }
+
+export const metadata: Metadata = {
+  title: "Privacy Policy",
+  description:
+    "FitPulse privacy policy — what data we collect, how we use it, and how to request deletion.",
+  alternates: { canonical: "/privacy" },
+};
 
 export default function PrivacyPage() {
   return (
@@ -120,9 +128,13 @@ export default function PrivacyPage() {
                 row-level security, meaning only you can access your own data.
               </p>
             </div>
+            <p className="font-manrope text-base leading-relaxed text-fp-text-secondary">
+              &bull; Vercel Analytics &amp; Speed Insights — Used for anonymous
+              performance monitoring (page load times, web vitals). No personal
+              data is collected, and no cookies are used by these services.
+            </p>
             <Highlight>
-              We do not use any analytics services, tracking pixels, or
-              advertising networks.
+              We do not use tracking pixels or advertising networks.
             </Highlight>
           </div>
 

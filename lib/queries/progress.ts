@@ -32,7 +32,8 @@ export async function getVolumeOverTime(
   const { data: sets } = await supabase
     .from("workout_sets")
     .select("workout_log_id, weight, reps")
-    .in("workout_log_id", logIds);
+    .in("workout_log_id", logIds)
+    .eq("is_warmup", false);
 
   const volumeByDate = new Map<string, number>();
 
@@ -66,7 +67,7 @@ export async function getExerciseProgress(
 
   const { data: sets } = await supabase
     .from("workout_sets")
-    .select("weight, reps, is_warmup, workout_log_id, workout_log:workout_logs(workout_date)")
+    .select("weight, reps, is_warmup, workout_log_id, workout_log:workout_logs!inner(workout_date)")
     .eq("user_id", user.id)
     .eq("exercise_id", exerciseId)
     .eq("is_warmup", false)
@@ -98,11 +99,16 @@ export async function getBestLifts(limit: number = 3): Promise<BestLift[]> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
 
+  const startDate = new Date();
+  startDate.setMonth(startDate.getMonth() - 6);
+  const startStr = startDate.toLocaleDateString("en-CA");
+
   const { data: sets } = await supabase
     .from("workout_sets")
-    .select("weight, reps, exercise_id, exercise:exercises(*)")
+    .select("weight, reps, exercise_id, exercise:exercises(*), workout_log:workout_logs!inner(workout_date)")
     .eq("user_id", user.id)
-    .eq("is_warmup", false);
+    .eq("is_warmup", false)
+    .gte("workout_log.workout_date", startStr);
 
   if (!sets || sets.length === 0) return [];
 

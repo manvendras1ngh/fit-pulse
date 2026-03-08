@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import {
   Activity,
@@ -47,6 +48,13 @@ const features = [
     desc: "See your personal records at a glance. Stay motivated.",
   },
 ];
+
+export const metadata: Metadata = {
+  title: "About",
+  description:
+    "FitPulse is a simple, distraction-free workout tracker. No ads, no social feeds — just your workouts.",
+  alternates: { canonical: "/about" },
+};
 
 export default function AboutPage() {
   return (

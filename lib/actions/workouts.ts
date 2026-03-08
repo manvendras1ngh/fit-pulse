@@ -14,13 +14,19 @@ export async function startWorkout(
   if (!user) return { success: false, error: "Not authenticated" };
 
   // Fetch-or-create: INSERT ON CONFLICT DO NOTHING then SELECT
-  await supabase.from("workout_logs").insert({
+  const { error: insertError } = await supabase.from("workout_logs").insert({
     user_id: user.id,
     workout_date: workoutDate,
     plan_id: planId ?? null,
     day_name: dayName ?? null,
     started_at: new Date().toISOString(),
   });
+
+  // Only ignore unique constraint violations (row already exists)
+  if (insertError && insertError.code !== "23505") {
+    console.error("startWorkout insert error:", insertError.message);
+    return { success: false, error: "Something went wrong" };
+  }
 
   const { data: log, error } = await supabase
     .from("workout_logs")
@@ -29,7 +35,8 @@ export async function startWorkout(
     .eq("workout_date", workoutDate)
     .single();
 
-  if (error || !log) return { success: false, error: error?.message ?? "Failed to create workout" };
+  if (error) console.error("startWorkout error:", error.message);
+  if (error || !log) return { success: false, error: "Something went wrong" };
 
   revalidatePath("/dashboard");
   return { success: true, data: log };
@@ -47,6 +54,13 @@ export async function addSet(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { success: false, error: "Not authenticated" };
 
+  if (!Number.isFinite(weight) || weight < 0)
+    return { success: false, error: "Invalid weight" };
+  if (!Number.isInteger(reps) || reps <= 0)
+    return { success: false, error: "Invalid reps" };
+  if (!Number.isInteger(setNumber) || setNumber <= 0)
+    return { success: false, error: "Invalid set number" };
+
   const { data, error } = await supabase
     .from("workout_sets")
     .insert({
@@ -61,7 +75,10 @@ export async function addSet(
     .select()
     .single();
 
-  if (error) return { success: false, error: error.message };
+  if (error) {
+    console.error("addSet error:", error.message);
+    return { success: false, error: "Something went wrong" };
+  }
 
   revalidatePath("/dashboard/workout");
   return { success: true, data };
@@ -80,13 +97,21 @@ export async function updateSet(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { success: false, error: "Not authenticated" };
 
+  if (updates.weight !== undefined && (!Number.isFinite(updates.weight) || updates.weight < 0))
+    return { success: false, error: "Invalid weight" };
+  if (updates.reps !== undefined && (!Number.isInteger(updates.reps) || updates.reps <= 0))
+    return { success: false, error: "Invalid reps" };
+
   const { error } = await supabase
     .from("workout_sets")
     .update(updates)
     .eq("id", setId)
     .eq("user_id", user.id);
 
-  if (error) return { success: false, error: error.message };
+  if (error) {
+    console.error("updateSet error:", error.message);
+    return { success: false, error: "Something went wrong" };
+  }
 
   revalidatePath("/dashboard/workout");
   return { success: true };
@@ -103,7 +128,10 @@ export async function deleteSet(setId: string) {
     .eq("id", setId)
     .eq("user_id", user.id);
 
-  if (error) return { success: false, error: error.message };
+  if (error) {
+    console.error("deleteSet error:", error.message);
+    return { success: false, error: "Something went wrong" };
+  }
 
   revalidatePath("/dashboard/workout");
   return { success: true };
@@ -120,7 +148,10 @@ export async function completeWorkout(workoutLogId: string) {
     .eq("id", workoutLogId)
     .eq("user_id", user.id);
 
-  if (error) return { success: false, error: error.message };
+  if (error) {
+    console.error("completeWorkout error:", error.message);
+    return { success: false, error: "Something went wrong" };
+  }
 
   revalidatePath("/dashboard");
   return { success: true };
@@ -143,7 +174,10 @@ export async function updateWorkoutLog(
     .eq("id", workoutLogId)
     .eq("user_id", user.id);
 
-  if (error) return { success: false, error: error.message };
+  if (error) {
+    console.error("updateWorkoutLog error:", error.message);
+    return { success: false, error: "Something went wrong" };
+  }
 
   revalidatePath("/dashboard/workout");
   return { success: true };

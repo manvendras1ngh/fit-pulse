@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext } from "react";
+import { createContext, useContext, useCallback } from "react";
 import type { UnitPreference } from "@/lib/types";
 
 const KG_TO_LBS = 2.20462;
@@ -20,11 +20,17 @@ export function UnitProvider({
 export function useUnit() {
   const unit = useContext(UnitContext);
 
-  const toDisplayWeight = (kg: number): number =>
-    unit === "lbs" ? Math.round(kg * KG_TO_LBS * 10) / 10 : kg;
+  const toDisplayWeight = useCallback(
+    (kg: number): number =>
+      unit === "lbs" ? Math.round(kg * KG_TO_LBS * 10) / 10 : kg,
+    [unit],
+  );
 
-  const toStorageWeight = (display: number): number =>
-    unit === "lbs" ? Math.round((display / KG_TO_LBS) * 10) / 10 : display;
+  const toStorageWeight = useCallback(
+    (display: number): number =>
+      unit === "lbs" ? Math.round((display / KG_TO_LBS) * 10) / 10 : display,
+    [unit],
+  );
 
   const unitLabel = unit;
 

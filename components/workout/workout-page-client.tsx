@@ -25,6 +25,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import type { WorkoutData } from "@/app/dashboard/workout/page";
 import type { Exercise, WorkoutLog, WorkoutSet } from "@/lib/types";
 
 interface ExerciseWithSets {
@@ -144,54 +145,86 @@ function workoutReducer(state: WorkoutState, action: WorkoutAction): WorkoutStat
 }
 
 interface WorkoutPageClientProps {
-  existingWorkout:
-    | (WorkoutLog & { exercises: ExerciseWithSets[] })
-    | null;
+  fetchWorkoutData: (
+    workoutDate: string,
+    planDayId?: string,
+  ) => Promise<WorkoutData>;
   planId?: string;
   dayName?: string;
-  planExercises?: Exercise[];
+  planDayId?: string;
 }
 
 export function WorkoutPageClient({
-  existingWorkout,
+  fetchWorkoutData,
   planId,
   dayName,
-  planExercises,
+  planDayId,
 }: WorkoutPageClientProps) {
   const router = useRouter();
+  const [loading, setLoading] = useState(true);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [completing, setCompleting] = useState(false);
   const [showEmptyConfirm, setShowEmptyConfirm] = useState(false);
   const debounceTimers = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
-  const initialExercises = existingWorkout?.exercises ??
-    (planExercises?.map((ex) => ({ exercise: ex, sets: [] })) ?? []);
-
   const [state, dispatch] = useReducer(workoutReducer, {
-    log: existingWorkout ?? null,
-    exercises: initialExercises,
+    log: null,
+    exercises: [],
     errorSetIds: new Set<string>(),
   });
 
-  // Initialize workout log if needed
+  const exercisesRef = useRef(state.exercises);
+  exercisesRef.current = state.exercises;
+
+  // Cleanup debounce timers on unmount
   useEffect(() => {
-    if (!state.log) {
-      const workoutDate = getWorkoutDate();
-      startWorkout(workoutDate, planId, dayName).then((result) => {
+    const timers = debounceTimers.current;
+    return () => {
+      timers.forEach((timer) => clearTimeout(timer));
+    };
+  }, []);
+
+  // Fetch workout data using client-side date, then initialize workout log
+  useEffect(() => {
+    const workoutDate = getWorkoutDate();
+
+    fetchWorkoutData(workoutDate, planDayId).then(async (data) => {
+      const { existingWorkout, planExercises } = data;
+
+      if (existingWorkout) {
+        dispatch({ type: "SET_LOG", log: existingWorkout });
+        dispatch({ type: "SET_EXERCISES", exercises: existingWorkout.exercises });
+        setLoading(false);
+      } else {
+        // Set plan exercises if available
+        if (planExercises && planExercises.length > 0) {
+          dispatch({
+            type: "SET_EXERCISES",
+            exercises: planExercises.map((ex) => ({ exercise: ex, sets: [] })),
+          });
+        }
+
+        // Create the workout log
+        const result = await startWorkout(workoutDate, planId, dayName);
         if (result.success && result.data) {
           dispatch({ type: "SET_LOG", log: result.data as WorkoutLog });
         } else {
           toast.error("Failed to start workout");
         }
-      });
-    }
-  }, [state.log, planId, dayName]);
+        setLoading(false);
+      }
+    }).catch(() => {
+      toast.error("Failed to load workout data");
+      setLoading(false);
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleAddSet = useCallback(
     async (exerciseId: string, defaultWeight?: number, defaultReps?: number) => {
       if (!state.log) return;
 
-      const exerciseEntry = state.exercises.find(
+      const exerciseEntry = exercisesRef.current.find(
         (e) => e.exercise.id === exerciseId,
       );
       const setNumber = (exerciseEntry?.sets.length ?? 0) + 1;
@@ -238,7 +271,7 @@ export function WorkoutPageClient({
         toast.error("Failed to add set");
       }
     },
-    [state.log, state.exercises],
+    [state.log],
   );
 
   const handleAddExercise = useCallback(
@@ -299,6 +332,10 @@ export function WorkoutPageClient({
       const entry = state.exercises.find((e) => e.exercise.id === exerciseId);
       if (!entry) return;
 
+      // Snapshot for revert
+      const snapshotExercise = entry.exercise;
+      const snapshotSets = [...entry.sets];
+
       // Optimistic remove
       dispatch({ type: "REMOVE_EXERCISE", exerciseId });
 
@@ -309,6 +346,11 @@ export function WorkoutPageClient({
       const results = await Promise.all(realSetIds.map((id) => deleteSet(id)));
       const failed = results.some((r) => !r.success);
       if (failed) {
+        // Restore exercise and its sets
+        dispatch({ type: "ADD_EXERCISE", exercise: snapshotExercise });
+        for (const s of snapshotSets) {
+          dispatch({ type: "ADD_SET", exerciseId: snapshotExercise.id, set: s });
+        }
         toast.error("Some sets failed to delete");
       }
     },
@@ -496,6 +538,28 @@ export function WorkoutPageClient({
   const subtitle = dayName
     ? `${dayName} — ${formattedDate}`
     : `Freestyle Workout — ${formattedDate}`;
+
+  if (loading) {
+    return (
+      <div className="mx-auto flex max-w-lg flex-col gap-4 md:gap-5 p-5">
+        {/* Header skeleton */}
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <div className="h-7 w-48 animate-pulse rounded-md bg-fp-bg-card" />
+            <div className="h-4 w-36 animate-pulse rounded-md bg-fp-bg-card" />
+          </div>
+          <div className="h-11 w-20 animate-pulse rounded-md bg-fp-bg-card" />
+        </div>
+        {/* Card skeletons */}
+        {[1, 2, 3].map((i) => (
+          <div
+            key={i}
+            className="h-32 animate-pulse rounded-xl bg-fp-bg-card"
+          />
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto flex max-w-lg flex-col gap-4 md:gap-5 p-5">

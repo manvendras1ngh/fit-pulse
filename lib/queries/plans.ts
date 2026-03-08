@@ -37,26 +37,19 @@ export async function getPlanWithDays(
 
   const { data: days } = await supabase
     .from("workout_plan_days")
-    .select("*")
+    .select("*, plan_day_exercises(*, exercise:exercises(*))")
     .eq("plan_id", planId)
     .order("day_of_week");
 
-  const daysWithExercises = [];
-
-  for (const day of days ?? []) {
-    const { data: planExercises } = await supabase
-      .from("plan_day_exercises")
-      .select("*, exercise:exercises(*)")
-      .eq("plan_day_id", day.id)
-      .order("position");
-
-    const exercises = (planExercises ?? []).map((pe) => ({
+  const daysWithExercises = (days ?? []).map((day) => {
+    const exercises = (day.plan_day_exercises ?? []).map((pe: Record<string, unknown>) => ({
       ...pe,
       exercise: pe.exercise as unknown as Exercise,
     })) as (PlanDayExercise & { exercise: Exercise })[];
 
-    daysWithExercises.push({ ...day, exercises });
-  }
+    const { plan_day_exercises: _unused, ...dayData } = day;
+    return { ...dayData, exercises };
+  });
 
   return { ...plan, days: daysWithExercises };
 }

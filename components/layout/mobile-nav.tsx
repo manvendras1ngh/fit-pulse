@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Dumbbell, TrendingUp, User } from "lucide-react";
+import { Home, Dumbbell, ClipboardList, TrendingUp, User } from "lucide-react";
 
 const navItems = [
   { href: "/dashboard", label: "Home", icon: Home },
   { href: "/dashboard/workout", label: "Workout", icon: Dumbbell },
+  { href: "/dashboard/plan", label: "Plan", icon: ClipboardList },
   { href: "/dashboard/progress", label: "Progress", icon: TrendingUp },
   { href: "/dashboard/profile", label: "Profile", icon: User },
 ];

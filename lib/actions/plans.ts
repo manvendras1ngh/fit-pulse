@@ -15,11 +15,16 @@ export async function createPlan(name: string, days: PlanDayInput[]) {
   if (!user) return { success: false, error: "Not authenticated" };
 
   // Deactivate any existing active plan
-  await supabase
+  const { error: deactivateError } = await supabase
     .from("workout_plans")
     .update({ is_active: false })
     .eq("user_id", user.id)
     .eq("is_active", true);
+
+  if (deactivateError) {
+    console.error("createPlan deactivate error:", deactivateError.message);
+    return { success: false, error: "Something went wrong" };
+  }
 
   // Create the new plan
   const { data: plan, error: planError } = await supabase
@@ -28,9 +33,11 @@ export async function createPlan(name: string, days: PlanDayInput[]) {
     .select()
     .single();
 
-  if (planError || !plan) return { success: false, error: planError?.message ?? "Failed to create plan" };
+  if (planError) console.error("createPlan error:", planError.message);
+  if (planError || !plan) return { success: false, error: "Something went wrong" };
 
   // Create days and their exercises
+  const failedDays: string[] = [];
   for (const day of days) {
     const { data: planDay, error: dayError } = await supabase
       .from("workout_plan_days")
@@ -42,7 +49,11 @@ export async function createPlan(name: string, days: PlanDayInput[]) {
       .select()
       .single();
 
-    if (dayError || !planDay) continue;
+    if (dayError || !planDay) {
+      if (dayError) console.error(`createPlan day insert error (${day.name}):`, dayError.message);
+      failedDays.push(day.name);
+      continue;
+    }
 
     if (day.exerciseIds.length > 0) {
       const exerciseRows = day.exerciseIds.map((exerciseId, i) => ({
@@ -57,6 +68,11 @@ export async function createPlan(name: string, days: PlanDayInput[]) {
 
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/plan");
+
+  if (failedDays.length > 0) {
+    return { success: true, data: plan, warning: `Some days could not be added: ${failedDays.join(", ")}` };
+  }
+
   return { success: true, data: plan };
 }
 
@@ -69,14 +85,16 @@ export async function updatePlan(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { success: false, error: "Not authenticated" };
 
-  // Update plan name
-  const { error: updateError } = await supabase
+  // Update plan name and verify ownership
+  const { data: updated, error: updateError } = await supabase
     .from("workout_plans")
     .update({ name })
     .eq("id", planId)
-    .eq("user_id", user.id);
+    .eq("user_id", user.id)
+    .select()
+    .single();
 
-  if (updateError) return { success: false, error: updateError.message };
+  if (updateError || !updated) return { success: false, error: "Plan not found" };
 
   // Delete existing days (cascades to plan_day_exercises)
   await supabase
@@ -125,7 +143,10 @@ export async function deletePlan(planId: string) {
     .eq("id", planId)
     .eq("user_id", user.id);
 
-  if (error) return { success: false, error: error.message };
+  if (error) {
+    console.error("deletePlan error:", error.message);
+    return { success: false, error: "Something went wrong" };
+  }
 
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/plan");
@@ -136,6 +157,16 @@ export async function setActivePlan(planId: string) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { success: false, error: "Not authenticated" };
+
+  // Save the current active plan ID before deactivating
+  const { data: currentActive } = await supabase
+    .from("workout_plans")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("is_active", true)
+    .single();
+
+  const previousActivePlanId = currentActive?.id ?? null;
 
   // Deactivate all plans
   await supabase
@@ -151,7 +182,22 @@ export async function setActivePlan(planId: string) {
     .eq("id", planId)
     .eq("user_id", user.id);
 
-  if (error) return { success: false, error: error.message };
+  if (error) {
+    console.error("setActivePlan error:", error.message);
+    // Attempt to reactivate the old plan
+    if (previousActivePlanId) {
+      const { error: reactivateError } = await supabase
+        .from("workout_plans")
+        .update({ is_active: true })
+        .eq("id", previousActivePlanId)
+        .eq("user_id", user.id);
+
+      if (reactivateError) {
+        console.error("setActivePlan reactivation failed:", reactivateError.message);
+      }
+    }
+    return { success: false, error: "Something went wrong" };
+  }
 
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/plan");
@@ -164,6 +210,8 @@ export async function addExerciseToPlanDay(
   position: number,
 ) {
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { success: false, error: "Not authenticated" };
 
   const { data, error } = await supabase
     .from("plan_day_exercises")
@@ -175,7 +223,10 @@ export async function addExerciseToPlanDay(
     .select()
     .single();
 
-  if (error) return { success: false, error: error.message };
+  if (error) {
+    console.error("addExerciseToPlanDay error:", error.message);
+    return { success: false, error: "Something went wrong" };
+  }
 
   revalidatePath("/dashboard/plan");
   return { success: true, data };
@@ -183,13 +234,18 @@ export async function addExerciseToPlanDay(
 
 export async function removeExerciseFromPlanDay(planDayExerciseId: string) {
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { success: false, error: "Not authenticated" };
 
   const { error } = await supabase
     .from("plan_day_exercises")
     .delete()
     .eq("id", planDayExerciseId);
 
-  if (error) return { success: false, error: error.message };
+  if (error) {
+    console.error("removeExerciseFromPlanDay error:", error.message);
+    return { success: false, error: "Something went wrong" };
+  }
 
   revalidatePath("/dashboard/plan");
   return { success: true };

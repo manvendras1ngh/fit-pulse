@@ -24,7 +24,10 @@ export async function createCustomExercise(
     .select()
     .single();
 
-  if (error) return { success: false, error: error.message };
+  if (error) {
+    console.error("createCustomExercise error:", error.message);
+    return { success: false, error: "Something went wrong" };
+  }
 
   revalidatePath("/dashboard/workout");
   return { success: true, data };
@@ -41,7 +44,10 @@ export async function softDeleteExercise(exerciseId: string) {
     .eq("id", exerciseId)
     .eq("user_id", user.id);
 
-  if (error) return { success: false, error: error.message };
+  if (error) {
+    console.error("softDeleteExercise error:", error.message);
+    return { success: false, error: "Something went wrong" };
+  }
 
   revalidatePath("/dashboard/workout");
   return { success: true };
@@ -61,7 +67,10 @@ export async function updateExerciseMuscleGroup(
     .eq("id", exerciseId)
     .eq("user_id", user.id);
 
-  if (error) return { success: false, error: error.message };
+  if (error) {
+    console.error("updateExerciseMuscleGroup error:", error.message);
+    return { success: false, error: "Something went wrong" };
+  }
 
   revalidatePath("/dashboard/workout");
   return { success: true };

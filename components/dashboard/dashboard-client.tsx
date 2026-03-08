@@ -57,7 +57,7 @@ export function DashboardClient({
   useEffect(() => {
     const workoutDate = getWorkoutDate();
     const dayOfWeek = getTodayDayOfWeek();
-    fetchData(workoutDate, dayOfWeek).then(setData);
+    fetchData(workoutDate, dayOfWeek).then(setData).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

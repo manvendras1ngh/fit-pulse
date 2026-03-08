@@ -23,10 +23,39 @@ const spaceMono = Space_Mono({
   weight: ["400", "700"],
 });
 
+const BASE_URL = "https://fit-pulse-six.vercel.app";
+
 export const metadata: Metadata = {
-  title: "FitPulse — Log fast. Lift heavier.",
+  metadataBase: new URL(BASE_URL),
+  title: {
+    default: "FitPulse — Log fast. Lift heavier.",
+    template: "%s | FitPulse",
+  },
   description:
     "Track your gym workouts, plan your splits, and watch your progress over time.",
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: BASE_URL,
+    siteName: "FitPulse",
+    title: "FitPulse — Log fast. Lift heavier.",
+    description:
+      "Track your gym workouts, plan your splits, and watch your progress over time.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "FitPulse — Log fast. Lift heavier.",
+    description:
+      "Track your gym workouts, plan your splits, and watch your progress over time.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+    },
+  },
   verification: {
     google: "GPe8_hhik0C-6k6JLP9wuy-c1FfuipjMN7BUbKUayJE",
   },
@@ -50,9 +79,9 @@ export default function RootLayout({
           theme="dark"
           toastOptions={{
             style: {
-              background: "#18181B",
-              border: "1px solid #27272A",
-              color: "#FFFFFF",
+              background: "var(--fp-bg-card)",
+              border: "1px solid var(--fp-border)",
+              color: "var(--fp-text-primary)",
             },
           }}
         />

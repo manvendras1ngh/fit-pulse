@@ -14,10 +14,13 @@ export async function updateProfile(updates: {
 
   const { error } = await supabase
     .from("profiles")
-    .update(updates)
+    .update({ name: updates.name, preferred_unit: updates.preferred_unit })
     .eq("id", user.id);
 
-  if (error) return { success: false, error: error.message };
+  if (error) {
+    console.error("updateProfile error:", error.message);
+    return { success: false, error: "Something went wrong" };
+  }
 
   revalidatePath("/dashboard/profile");
   revalidatePath("/dashboard");
