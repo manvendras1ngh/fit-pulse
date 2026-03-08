@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { createCustomExercise } from "@/lib/actions/exercises";
 import { toast } from "sonner";
 import type { Exercise, MuscleGroup } from "@/lib/types";
+import { MUSCLE_GROUPS } from "@/lib/constants";
 
 interface ExercisePickerProps {
   open: boolean;
@@ -14,11 +15,6 @@ interface ExercisePickerProps {
   onSelect: (exercise: Exercise) => void;
   excludeIds?: string[];
 }
-
-const MUSCLE_GROUPS: MuscleGroup[] = [
-  "chest", "back", "shoulders", "biceps", "triceps",
-  "legs", "core", "full_body", "cardio",
-];
 
 export function ExercisePicker({
   open,
@@ -59,19 +55,8 @@ export function ExercisePicker({
 
   useEffect(() => {
     if (!open) return;
-    const supabase = createClient();
-    supabase
-      .from("exercises")
-      .select("*")
-      .eq("is_deleted", false)
-      .order("name")
-      .limit(30)
-      .then(({ data }) => {
-        const all = (data ?? []) as Exercise[];
-        setExercises(all.filter((e) => !excludeIds.includes(e.id)));
-        setExcludedMatches(all.filter((e) => excludeIds.includes(e.id)));
-      });
-  }, [open, excludeIds]);
+    fetchExercises("");
+  }, [open, fetchExercises]);
 
   // Scroll create form into view when it opens
   useEffect(() => {

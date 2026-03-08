@@ -138,14 +138,15 @@ export async function getWorkoutCount(): Promise<number> {
 
   const { data } = await supabase
     .from("workout_logs")
-    .select("id, workout_sets(id)")
+    .select("id, workout_sets(count)")
     .eq("user_id", user.id)
     .not("completed_at", "is", null);
 
   // Only count workouts that have at least one set
-  const count = (data ?? []).filter(
-    (log) => Array.isArray(log.workout_sets) && log.workout_sets.length > 0,
+  return (data ?? []).filter(
+    (log) => {
+      const sets = log.workout_sets as unknown as { count: number }[];
+      return sets?.[0]?.count > 0;
+    },
   ).length;
-
-  return count;
 }

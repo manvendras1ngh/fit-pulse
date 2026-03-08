@@ -18,18 +18,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import type { Exercise, WorkoutSet, MuscleGroup } from "@/lib/types";
-
-const MUSCLE_GROUPS: MuscleGroup[] = [
-  "chest",
-  "back",
-  "shoulders",
-  "biceps",
-  "triceps",
-  "legs",
-  "core",
-  "full_body",
-  "cardio",
-];
+import { MUSCLE_GROUPS } from "@/lib/constants";
 
 interface ExerciseCardProps {
   exercise: Exercise;
@@ -70,8 +59,9 @@ export function ExerciseCard({
         'input[inputmode="decimal"]',
       ).length ?? 0;
     onAddSet();
-    // Poll until React renders the new input, then focus it
+    let attempts = 0;
     const checkAndFocus = () => {
+      if (++attempts > 60) return;
       const inputs =
         setsContainerRef.current?.querySelectorAll<HTMLInputElement>(
           'input[inputmode="decimal"]',

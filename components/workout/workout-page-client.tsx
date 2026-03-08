@@ -248,48 +248,48 @@ export function WorkoutPageClient({
 
       // Fetch history and auto-populate sets
       const history = await getExerciseHistory(exercise.id);
-      if (history.length > 0) {
-        for (let i = 0; i < history.length; i++) {
-          const h = history[i];
-          const setNumber = i + 1;
+      if (history.length === 0) return;
 
-          const tempId = `temp-${Date.now()}-${setNumber}`;
-          const tempSet: WorkoutSet = {
-            id: tempId,
-            workout_log_id: state.log.id,
-            user_id: state.log.user_id,
-            exercise_id: exercise.id,
-            set_number: setNumber,
-            weight: h.weight,
-            reps: h.reps,
-            is_warmup: h.is_warmup,
-            is_completed: false,
-            created_at: new Date().toISOString(),
-          };
+      const now = Date.now();
+      const tempSets = history.map((h, i) => {
+        const setNumber = i + 1;
+        const tempId = `temp-${now}-${setNumber}`;
+        const tempSet: WorkoutSet = {
+          id: tempId,
+          workout_log_id: state.log!.id,
+          user_id: state.log!.user_id,
+          exercise_id: exercise.id,
+          set_number: setNumber,
+          weight: h.weight,
+          reps: h.reps,
+          is_warmup: h.is_warmup,
+          is_completed: false,
+          created_at: new Date().toISOString(),
+        };
+        dispatch({ type: "ADD_SET", exerciseId: exercise.id, set: tempSet });
+        return { tempId, h, setNumber };
+      });
 
-          dispatch({ type: "ADD_SET", exerciseId: exercise.id, set: tempSet });
+      // Fire all server calls in parallel
+      const results = await Promise.all(
+        tempSets.map(({ h, setNumber }) =>
+          addSet(state.log!.id, exercise.id, setNumber, h.weight, h.reps, h.is_warmup),
+        ),
+      );
 
-          const result = await addSet(
-            state.log.id,
-            exercise.id,
-            setNumber,
-            h.weight,
-            h.reps,
-            h.is_warmup,
-          );
-
-          if (result.success && result.data) {
-            dispatch({
-              type: "UPDATE_SET",
-              setId: tempId,
-              updates: { id: (result.data as WorkoutSet).id },
-            });
-          } else {
-            dispatch({ type: "DELETE_SET", setId: tempId });
-            toast.error("Failed to add set");
-          }
+      results.forEach((result, i) => {
+        const { tempId } = tempSets[i];
+        if (result.success && result.data) {
+          dispatch({
+            type: "UPDATE_SET",
+            setId: tempId,
+            updates: { id: (result.data as WorkoutSet).id },
+          });
+        } else {
+          dispatch({ type: "DELETE_SET", setId: tempId });
+          toast.error("Failed to add set");
         }
-      }
+      });
     },
     [state.log],
   );
@@ -315,24 +315,25 @@ export function WorkoutPageClient({
     [state.exercises],
   );
 
-  const handleUpdateWeight = useCallback(
-    (setId: string, weight: number) => {
-      dispatch({ type: "UPDATE_SET", setId, updates: { weight } });
+  const handleUpdateField = useCallback(
+    (setId: string, field: "weight" | "reps", value: number) => {
+      dispatch({ type: "UPDATE_SET", setId, updates: { [field]: value } });
 
       if (setId.startsWith("temp-")) return;
 
-      const key = `weight-${setId}`;
+      const key = `${field}-${setId}`;
       const existing = debounceTimers.current.get(key);
       if (existing) clearTimeout(existing);
 
+      const serverValue = field === "reps" ? (value || 1) : value;
       debounceTimers.current.set(
         key,
         setTimeout(async () => {
           debounceTimers.current.delete(key);
-          const result = await updateSet(setId, { weight });
+          const result = await updateSet(setId, { [field]: serverValue });
           if (!result.success) {
             dispatch({ type: "SET_ERROR", setId });
-            toast.error("Failed to save weight");
+            toast.error(`Failed to save ${field}`);
             setTimeout(() => dispatch({ type: "CLEAR_ERROR", setId }), 2000);
           }
         }, 500),
@@ -341,30 +342,14 @@ export function WorkoutPageClient({
     [],
   );
 
+  const handleUpdateWeight = useCallback(
+    (setId: string, weight: number) => handleUpdateField(setId, "weight", weight),
+    [handleUpdateField],
+  );
+
   const handleUpdateReps = useCallback(
-    (setId: string, reps: number) => {
-      dispatch({ type: "UPDATE_SET", setId, updates: { reps } });
-
-      if (setId.startsWith("temp-")) return;
-
-      const key = `reps-${setId}`;
-      const existing = debounceTimers.current.get(key);
-      if (existing) clearTimeout(existing);
-
-      debounceTimers.current.set(
-        key,
-        setTimeout(async () => {
-          debounceTimers.current.delete(key);
-          const result = await updateSet(setId, { reps: reps || 1 });
-          if (!result.success) {
-            dispatch({ type: "SET_ERROR", setId });
-            toast.error("Failed to save reps");
-            setTimeout(() => dispatch({ type: "CLEAR_ERROR", setId }), 2000);
-          }
-        }, 500),
-      );
-    },
-    [],
+    (setId: string, reps: number) => handleUpdateField(setId, "reps", reps),
+    [handleUpdateField],
   );
 
   const handleToggleWarmup = useCallback(
@@ -495,13 +480,14 @@ export function WorkoutPageClient({
   );
 
   const sortedExercises = useMemo(() => {
-    const incomplete: ExerciseWithSets[] = [];
-    const completed: ExerciseWithSets[] = [];
+    const incomplete: (ExerciseWithSets & { isLocked: boolean })[] = [];
+    const completed: (ExerciseWithSets & { isLocked: boolean })[] = [];
     for (const entry of state.exercises) {
-      if (entry.sets.length > 0 && entry.sets.every((s) => s.is_completed)) {
-        completed.push(entry);
+      const isLocked = entry.sets.length > 0 && entry.sets.every((s) => s.is_completed);
+      if (isLocked) {
+        completed.push({ ...entry, isLocked });
       } else {
-        incomplete.push(entry);
+        incomplete.push({ ...entry, isLocked });
       }
     }
     return [...incomplete, ...completed];
@@ -531,15 +517,13 @@ export function WorkoutPageClient({
       </div>
 
       {/* Exercise Cards */}
-      {sortedExercises.map((entry) => {
-        const isLocked = entry.sets.length > 0 && entry.sets.every((s) => s.is_completed);
-        return (
+      {sortedExercises.map((entry) => (
           <ExerciseCard
             key={entry.exercise.id}
             exercise={entry.exercise}
             sets={entry.sets}
             errorSetIds={state.errorSetIds}
-            isLocked={isLocked}
+            isLocked={entry.isLocked}
             onAddSet={() => handleAddSet(entry.exercise.id)}
             onUpdateWeight={handleUpdateWeight}
             onUpdateReps={handleUpdateReps}
@@ -549,8 +533,7 @@ export function WorkoutPageClient({
             onRemoveExercise={() => handleRemoveExercise(entry.exercise.id)}
             onExerciseUpdate={(ex) => dispatch({ type: "UPDATE_EXERCISE", exercise: ex })}
           />
-        );
-      })}
+      ))}
 
       {/* Add Exercise */}
       <button
