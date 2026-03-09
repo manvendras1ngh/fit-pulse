@@ -38,13 +38,15 @@ export async function getDashboardData(
   weekEnd: string,
 ): Promise<DashboardData | null> {
   const supabase = await createClient();
+  // Middleware already validated session via getUser() — safe to read from cookie
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
 
-  if (!user) return null;
+  if (!session) return null;
 
-  const ctx = { supabase, userId: user.id };
+  const userId = session.user.id;
+  const ctx = { supabase, userId };
 
   // Fetch profile + all dashboard queries in parallel with shared auth context
   const [profile, todayWorkout, todayPlanDay, activePlan, recentWorkouts, weeklySummary, workoutCount] =
@@ -52,7 +54,7 @@ export async function getDashboardData(
       supabase
         .from("profiles")
         .select("*")
-        .eq("id", user.id)
+        .eq("id", userId)
         .single()
         .then((r) => r.data as Profile | null),
       getTodayWorkout(workoutDate, ctx),

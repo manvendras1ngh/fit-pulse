@@ -11,18 +11,19 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   const supabase = await createClient();
+  // Middleware already validated session via getUser() — safe to read from cookie
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
 
-  if (!user) {
+  if (!session) {
     redirect("/login");
   }
 
   const { data: profile } = await supabase
     .from("profiles")
     .select("preferred_unit, name")
-    .eq("id", user.id)
+    .eq("id", session.user.id)
     .single();
 
   const preferredUnit: UnitPreference = profile?.preferred_unit ?? "kg";

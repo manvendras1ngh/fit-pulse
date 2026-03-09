@@ -1,9 +1,7 @@
 import Link from "next/link";
-import { MOTIVATIONAL_MESSAGES } from "@/lib/constants";
+import { HeroMockup } from "./hero-mockup";
 
 export function Hero() {
-  const quote = MOTIVATIONAL_MESSAGES[new Date().getDay()];
-
   return (
     <section className="relative flex flex-col items-center px-6 pb-20 pt-32 text-center md:pt-40">
       {/* Badge */}
@@ -38,36 +36,8 @@ export function Hero() {
         </a>
       </div>
 
-      {/* App Mockup */}
-      <div className="mt-16 w-full max-w-md rounded-4xl border border-fp-border bg-fp-bg-card p-4 shadow-[0_0_60px_0_rgba(196,248,42,0.08)]">
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center justify-between">
-            <span className="font-space-mono text-[11px] font-semibold text-fp-accent">
-              &ldquo;{quote}&rdquo;
-            </span>
-          </div>
-          <div className="grid grid-cols-3 gap-3">
-            <div className="rounded-xl bg-fp-bg-elevated p-3 text-center">
-              <p className="font-space-grotesk text-2xl font-bold text-fp-text-primary">
-                2,840
-              </p>
-              <p className="text-[10px] text-fp-text-tertiary">kg/WEEK</p>
-            </div>
-            <div className="rounded-xl bg-fp-bg-elevated p-3 text-center">
-              <p className="font-space-grotesk text-2xl font-bold text-fp-text-primary">
-                54
-              </p>
-              <p className="text-[10px] text-fp-text-tertiary">TOTAL DAYS</p>
-            </div>
-            <div className="rounded-xl bg-fp-bg-elevated p-3 text-center">
-              <p className="font-space-grotesk text-2xl font-bold text-fp-text-primary">
-                120
-              </p>
-              <p className="text-[10px] text-fp-text-tertiary">BEST SET</p>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* App Mockup — client island for animations */}
+      <HeroMockup />
     </section>
   );
 }

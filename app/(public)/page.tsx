@@ -1,6 +1,4 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
 import { LandingHeader } from "@/components/landing/header";
 import { Hero } from "@/components/landing/hero";
 import { Features } from "@/components/landing/features";
@@ -14,16 +12,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/" },
 };
 
-export default async function LandingPage() {
-  const cookieStore = await cookies();
-  const hasSession = cookieStore
-    .getAll()
-    .some((c) => c.name.startsWith("sb-"));
-
-  if (hasSession) {
-    redirect("/dashboard");
-  }
-
+export default function LandingPage() {
   return (
     <div className="min-h-screen bg-fp-bg-page">
       <LandingHeader />
