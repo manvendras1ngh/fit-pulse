@@ -1,5 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { WorkoutLog, WorkoutSet, Exercise, WeeklySummary } from "@/lib/types";
+
+interface AuthContext {
+  supabase: SupabaseClient;
+  userId: string;
+}
 
 export interface HistoricalSet {
   weight: number;
@@ -42,15 +48,16 @@ export async function getLastSessionSets(
     }));
 }
 
-export async function getTodayWorkout(workoutDate: string): Promise<
+export async function getTodayWorkout(workoutDate: string, ctx?: AuthContext): Promise<
   | (WorkoutLog & {
       exercises: { exercise: Exercise; sets: WorkoutSet[] }[];
     })
   | null
 > {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
+  const supabase = ctx?.supabase ?? await createClient();
+  const userId = ctx?.userId ?? (await supabase.auth.getUser()).data.user?.id;
+  if (!userId) return null;
+  const user = { id: userId };
 
   const { data: log } = await supabase
     .from("workout_logs")
@@ -92,15 +99,16 @@ export async function getTodayWorkout(workoutDate: string): Promise<
 
 export async function getRecentWorkouts(
   limit: number = 7,
+  ctx?: AuthContext,
 ): Promise<WorkoutLog[]> {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return [];
+  const supabase = ctx?.supabase ?? await createClient();
+  const userId = ctx?.userId ?? (await supabase.auth.getUser()).data.user?.id;
+  if (!userId) return [];
 
   const { data } = await supabase
     .from("workout_logs")
     .select("*, workout_sets(id)")
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .not("completed_at", "is", null)
     .order("workout_date", { ascending: false })
     .limit(limit);
@@ -114,16 +122,17 @@ export async function getRecentWorkouts(
 export async function getWeeklySummary(
   weekStart: string,
   weekEnd: string,
+  ctx?: AuthContext,
 ): Promise<WeeklySummary> {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user)
+  const supabase = ctx?.supabase ?? await createClient();
+  const userId = ctx?.userId ?? (await supabase.auth.getUser()).data.user?.id;
+  if (!userId)
     return { workoutsThisWeek: 0, totalVolume: 0, totalSets: 0 };
 
   const { data: rawLogs } = await supabase
     .from("workout_logs")
     .select("id, workout_sets(id)")
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .not("completed_at", "is", null)
     .gte("workout_date", weekStart)
     .lte("workout_date", weekEnd);

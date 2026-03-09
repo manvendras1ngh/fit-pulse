@@ -15,15 +15,16 @@ export function WeeklySummary({
   const today = new Date();
   const todayDay = today.getDay();
 
-  // Build a set of days-of-week that have workouts this week
-  // Parse dates as local time by using "/" separator instead of "-"
+  // Build a set of days-of-week that have workouts this week (Sun–Sat)
+  const weekStart = new Date(today);
+  weekStart.setDate(today.getDate() - todayDay);
+  weekStart.setHours(0, 0, 0, 0);
+
   const workedOutDays = new Set<number>();
   for (const log of recentWorkouts) {
+    // Parse as local time by using "/" separator instead of "-"
     const logDate = new Date(log.workout_date.replace(/-/g, "/"));
-    const dayDiff = Math.floor(
-      (today.getTime() - logDate.getTime()) / (1000 * 60 * 60 * 24),
-    );
-    if (dayDiff >= 0 && dayDiff < 7) {
+    if (logDate >= weekStart && logDate <= today) {
       workedOutDays.add(logDate.getDay());
     }
   }

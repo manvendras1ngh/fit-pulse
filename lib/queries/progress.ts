@@ -1,5 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { BestLift, Exercise } from "@/lib/types";
+
+interface AuthContext {
+  supabase: SupabaseClient;
+  userId: string;
+}
 
 interface VolumeDataPoint {
   date: string;
@@ -137,15 +143,15 @@ export async function getBestLifts(limit: number = 3): Promise<BestLift[]> {
     .slice(0, limit);
 }
 
-export async function getWorkoutCount(): Promise<number> {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return 0;
+export async function getWorkoutCount(ctx?: AuthContext): Promise<number> {
+  const supabase = ctx?.supabase ?? await createClient();
+  const userId = ctx?.userId ?? (await supabase.auth.getUser()).data.user?.id;
+  if (!userId) return 0;
 
   const { data } = await supabase
     .from("workout_logs")
     .select("id, workout_sets(count)")
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .not("completed_at", "is", null);
 
   // Only count workouts that have at least one set

@@ -8,15 +8,7 @@ import type {
   WorkoutPlanDay,
 } from "@/lib/types";
 
-export const MOTIVATIONAL_MESSAGES = [
-  "Rest day legend",
-  "New week, new gains",
-  "Stronger than yesterday",
-  "Halfway hero",
-  "Yeah, you crushed it!",
-  "That's how it's done",
-  "Beast mode: activated",
-];
+export { MOTIVATIONAL_MESSAGES } from "@/lib/constants";
 
 interface TodaySummaryProps {
   todayPlanDay:

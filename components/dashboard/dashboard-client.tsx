@@ -1,16 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { TodaySummary, MOTIVATIONAL_MESSAGES } from "./today-summary";
+import { TodaySummary } from "./today-summary";
+import { MOTIVATIONAL_MESSAGES } from "@/lib/constants";
 import { WeeklySummary } from "./weekly-summary";
 import { LevelBadge } from "./level-badge";
 import { computeLevel } from "@/lib/utils/level";
-import { getWorkoutDate, getTodayDayOfWeek } from "@/lib/utils/workout-date";
 import { useUnit } from "@/lib/contexts/unit-context";
 import type {
   Profile,
-  WorkoutLog,
   WorkoutLogWithSets,
+  WorkoutLog,
   Exercise,
   PlanDayExercise,
   WorkoutPlan,
@@ -20,59 +19,31 @@ import type {
 
 interface DashboardClientProps {
   profile: Profile;
-  fetchData: (
-    workoutDate: string,
-    dayOfWeek: number,
-  ) => Promise<{
-    todayWorkout: WorkoutLogWithSets | null;
-    todayPlanDay:
-      | (WorkoutPlanDay & {
-          exercises: (PlanDayExercise & { exercise: Exercise })[];
-        })
-      | null;
-    activePlan: WorkoutPlan | null;
-    recentWorkouts: WorkoutLog[];
-    weeklySummary: WeeklySummaryType;
-    workoutCount: number;
-  }>;
+  todayWorkout: WorkoutLogWithSets | null;
+  todayPlanDay:
+    | (WorkoutPlanDay & {
+        exercises: (PlanDayExercise & { exercise: Exercise })[];
+      })
+    | null;
+  activePlan: WorkoutPlan | null;
+  recentWorkouts: WorkoutLog[];
+  weeklySummary: WeeklySummaryType;
+  workoutCount: number;
 }
 
 export function DashboardClient({
   profile,
-  fetchData,
+  todayWorkout,
+  todayPlanDay,
+  activePlan,
+  recentWorkouts,
+  weeklySummary,
+  workoutCount,
 }: DashboardClientProps) {
-  const [data, setData] = useState<{
-    todayWorkout: WorkoutLogWithSets | null;
-    todayPlanDay:
-      | (WorkoutPlanDay & {
-          exercises: (PlanDayExercise & { exercise: Exercise })[];
-        })
-      | null;
-    activePlan: WorkoutPlan | null;
-    recentWorkouts: WorkoutLog[];
-    weeklySummary: WeeklySummaryType;
-    workoutCount: number;
-  } | null>(null);
-
-  useEffect(() => {
-    const workoutDate = getWorkoutDate();
-    const dayOfWeek = getTodayDayOfWeek();
-    fetchData(workoutDate, dayOfWeek).then(setData).catch(() => {});
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   const { toDisplayWeight, unitLabel } = useUnit();
 
-  const level = computeLevel(
-    data?.workoutCount ?? 0,
-    false,
-    false,
-  );
-
+  const level = computeLevel(workoutCount, false, false);
   const firstName = profile.name?.split(" ")[0] ?? "there";
-
-  // Stat card computations
-  const todayWorkout = data?.todayWorkout ?? null;
 
   const todayVolume = todayWorkout
     ? todayWorkout.exercises.reduce(
@@ -132,7 +103,7 @@ export function DashboardClient({
           </div>
           <div className="rounded-xl bg-fp-bg-elevated p-3">
             <p className="font-space-grotesk text-lg font-bold text-fp-text-primary">
-              {data?.workoutCount ?? 0}
+              {workoutCount}
             </p>
             <p className="font-space-mono text-[11px] tracking-[0.5px] text-fp-text-tertiary">
               TOTAL DAYS
@@ -153,15 +124,15 @@ export function DashboardClient({
 
       {/* Today's Workout Card */}
       <TodaySummary
-        todayPlanDay={data?.todayPlanDay ?? null}
-        todayWorkout={data?.todayWorkout ?? null}
-        planId={data?.activePlan?.id}
+        todayPlanDay={todayPlanDay}
+        todayWorkout={todayWorkout}
+        planId={activePlan?.id}
       />
 
       {/* Weekly Summary */}
       <WeeklySummary
-        recentWorkouts={data?.recentWorkouts ?? []}
-        workoutsThisWeek={data?.weeklySummary.workoutsThisWeek ?? 0}
+        recentWorkouts={recentWorkouts}
+        workoutsThisWeek={weeklySummary.workoutsThisWeek}
       />
     </div>
   );

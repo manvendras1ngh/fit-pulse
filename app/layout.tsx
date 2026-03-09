@@ -68,6 +68,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{let z=Intl.DateTimeFormat().resolvedOptions().timeZone;if(z&&!document.cookie.includes("tz="))document.cookie="tz="+z+";path=/;max-age=31536000;SameSite=Lax"}catch(e){}`,
+          }}
+        />
+      </head>
       <body
         className={`${spaceGrotesk.variable} ${manrope.variable} ${spaceMono.variable} font-manrope antialiased`}
       >

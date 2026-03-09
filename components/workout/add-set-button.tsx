@@ -19,7 +19,7 @@ export function AddSetButton({ onAdd }: AddSetButtonProps) {
   return (
     <button
       onClick={handleClick}
-      className="flex items-center justify-center py-1 font-manrope text-[13px] font-semibold text-fp-accent hover:opacity-80 md:h-9 md:rounded-lg md:border md:border-fp-accent"
+      className="flex items-center justify-center rounded-lg border border-fp-accent py-1 font-manrope text-[13px] font-semibold text-fp-accent hover:opacity-80 md:h-9"
     >
       + Add Set
     </button>

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { cookies } from "next/headers";
 import { LandingHeader } from "@/components/landing/header";
 import { Hero } from "@/components/landing/hero";
 import { Features } from "@/components/landing/features";
@@ -15,12 +15,12 @@ export const metadata: Metadata = {
 };
 
 export default async function LandingPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const cookieStore = await cookies();
+  const hasSession = cookieStore
+    .getAll()
+    .some((c) => c.name.startsWith("sb-"));
 
-  if (user) {
+  if (hasSession) {
     redirect("/dashboard");
   }
 

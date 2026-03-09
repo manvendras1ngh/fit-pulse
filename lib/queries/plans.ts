@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type {
   WorkoutPlan,
   WorkoutPlanDay,
@@ -7,15 +8,20 @@ import type {
   PlanWithDays,
 } from "@/lib/types";
 
-export async function getActivePlan(): Promise<WorkoutPlan | null> {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
+interface AuthContext {
+  supabase: SupabaseClient;
+  userId: string;
+}
+
+export async function getActivePlan(ctx?: AuthContext): Promise<WorkoutPlan | null> {
+  const supabase = ctx?.supabase ?? await createClient();
+  const userId = ctx?.userId ?? (await supabase.auth.getUser()).data.user?.id;
+  if (!userId) return null;
 
   const { data } = await supabase
     .from("workout_plans")
     .select("*")
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .eq("is_active", true)
     .single();
 
@@ -56,11 +62,12 @@ export async function getPlanWithDays(
 
 export async function getTodayPlanDay(
   dayOfWeek: number,
+  ctx?: AuthContext,
 ): Promise<(WorkoutPlanDay & { exercises: (PlanDayExercise & { exercise: Exercise })[] }) | null> {
-  const activePlan = await getActivePlan();
+  const activePlan = await getActivePlan(ctx);
   if (!activePlan) return null;
 
-  const supabase = await createClient();
+  const supabase = ctx?.supabase ?? await createClient();
 
   const { data: day } = await supabase
     .from("workout_plan_days")
