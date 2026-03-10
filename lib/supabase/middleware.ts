@@ -39,11 +39,18 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Redirect authenticated users away from login
-  if (user && pathname === "/login") {
-    const url = request.nextUrl.clone();
-    url.pathname = "/dashboard";
-    return NextResponse.redirect(url);
+  // Pass user ID to server components via request header
+  if (user) {
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set("x-user-id", user.id);
+    const newResponse = NextResponse.next({
+      request: { headers: requestHeaders },
+    });
+    // Preserve Supabase set-cookie headers
+    supabaseResponse.headers.getSetCookie().forEach((cookie) => {
+      newResponse.headers.append("set-cookie", cookie);
+    });
+    supabaseResponse = newResponse;
   }
 
   return supabaseResponse;

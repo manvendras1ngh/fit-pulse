@@ -28,24 +28,17 @@ export interface DashboardData {
 }
 
 /**
- * Fetch all dashboard data with a single Supabase client and one getUser() call.
- * This eliminates ~9 redundant auth round-trips.
+ * Fetch all dashboard data with a single Supabase client.
+ * User ID is passed from middleware — zero auth calls here.
  */
 export async function getDashboardData(
+  userId: string,
   workoutDate: string,
   dayOfWeek: number,
   weekStart: string,
   weekEnd: string,
 ): Promise<DashboardData | null> {
   const supabase = await createClient();
-  // Middleware already validated session via getUser() — safe to read from cookie
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  if (!session) return null;
-
-  const userId = session.user.id;
   const ctx = { supabase, userId };
 
   // Fetch profile + all dashboard queries in parallel with shared auth context

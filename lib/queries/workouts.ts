@@ -57,22 +57,18 @@ export async function getTodayWorkout(workoutDate: string, ctx?: AuthContext): P
   const supabase = ctx?.supabase ?? await createClient();
   const userId = ctx?.userId ?? (await supabase.auth.getUser()).data.user?.id;
   if (!userId) return null;
-  const user = { id: userId };
 
+  // Single query with nested select — no waterfall
   const { data: log } = await supabase
     .from("workout_logs")
-    .select("*")
-    .eq("user_id", user.id)
+    .select("*, workout_sets(*, exercise:exercises(*))")
+    .eq("user_id", userId)
     .eq("workout_date", workoutDate)
     .single();
 
   if (!log) return null;
 
-  const { data: sets } = await supabase
-    .from("workout_sets")
-    .select("*, exercise:exercises(*)")
-    .eq("workout_log_id", log.id)
-    .order("set_number");
+  const rawSets = (log.workout_sets ?? []) as (WorkoutSet & { exercise: Exercise })[];
 
   // Group sets by exercise
   const exerciseMap = new Map<
@@ -80,7 +76,7 @@ export async function getTodayWorkout(workoutDate: string, ctx?: AuthContext): P
     { exercise: Exercise; sets: WorkoutSet[] }
   >();
 
-  for (const set of sets ?? []) {
+  for (const set of rawSets) {
     const exerciseData = set.exercise as unknown as Exercise;
     const exerciseId = set.exercise_id;
     if (!exerciseMap.has(exerciseId)) {
@@ -91,8 +87,10 @@ export async function getTodayWorkout(workoutDate: string, ctx?: AuthContext): P
     exerciseMap.get(exerciseId)!.sets.push(setData as WorkoutSet);
   }
 
+  const { workout_sets: _raw, ...logData } = log;
+
   return {
-    ...log,
+    ...logData,
     exercises: Array.from(exerciseMap.values()),
   };
 }
@@ -129,9 +127,10 @@ export async function getWeeklySummary(
   if (!userId)
     return { workoutsThisWeek: 0, totalVolume: 0, totalSets: 0 };
 
+  // Single query with nested select — no waterfall
   const { data: rawLogs } = await supabase
     .from("workout_logs")
-    .select("id, workout_sets(id)")
+    .select("id, workout_sets(weight, reps, is_warmup)")
     .eq("user_id", userId)
     .not("completed_at", "is", null)
     .gte("workout_date", weekStart)
@@ -146,19 +145,15 @@ export async function getWeeklySummary(
     return { workoutsThisWeek: 0, totalVolume: 0, totalSets: 0 };
   }
 
-  const logIds = logs.map((l) => l.id);
-
-  const { data: sets } = await supabase
-    .from("workout_sets")
-    .select("weight, reps")
-    .in("workout_log_id", logIds)
-    .eq("is_warmup", false);
-
   let totalVolume = 0;
   let totalSets = 0;
-  for (const set of sets ?? []) {
-    totalVolume += Number(set.weight) * set.reps;
-    totalSets++;
+  for (const log of logs) {
+    for (const set of log.workout_sets as { weight: number; reps: number; is_warmup: boolean }[]) {
+      if (!set.is_warmup) {
+        totalVolume += Number(set.weight) * set.reps;
+        totalSets++;
+      }
+    }
   }
 
   return {

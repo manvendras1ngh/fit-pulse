@@ -69,27 +69,23 @@ export async function getTodayPlanDay(
 
   const supabase = ctx?.supabase ?? await createClient();
 
+  // Single query with nested select — no waterfall
   const { data: day } = await supabase
     .from("workout_plan_days")
-    .select("*")
+    .select("*, plan_day_exercises(*, exercise:exercises(*))")
     .eq("plan_id", activePlan.id)
     .eq("day_of_week", dayOfWeek)
     .single();
 
   if (!day) return null;
 
-  const { data: planExercises } = await supabase
-    .from("plan_day_exercises")
-    .select("*, exercise:exercises(*)")
-    .eq("plan_day_id", day.id)
-    .order("position");
-
-  const exercises = (planExercises ?? []).map((pe) => ({
+  const exercises = (day.plan_day_exercises ?? []).map((pe: Record<string, unknown>) => ({
     ...pe,
     exercise: pe.exercise as unknown as Exercise,
   })) as (PlanDayExercise & { exercise: Exercise })[];
 
-  return { ...day, exercises };
+  const { plan_day_exercises: _unused, ...dayData } = day;
+  return { ...dayData, exercises };
 }
 
 export async function getAllPlans(): Promise<WorkoutPlan[]> {
