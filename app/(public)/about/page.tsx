@@ -50,9 +50,9 @@ const features = [
 ];
 
 export const metadata: Metadata = {
-  title: "About",
+  title: "About FitPulse — Built by Manav Singh (Manvendra Singh)",
   description:
-    "FitPulse is a simple, distraction-free workout tracker. No ads, no social feeds — just your workouts.",
+    "FitPulse is a free workout tracker and exercise logger created by Manav Singh (Manvendra Singh). Track exercises, plan gym splits, and monitor progress — no ads, no distractions.",
   alternates: { canonical: "/about" },
 };
 
@@ -62,7 +62,7 @@ export default function AboutPage() {
       <LandingHeader />
       <main className="min-h-screen bg-fp-bg-page pt-16">
         {/* Hero */}
-        <section className="px-6 pb-10 pt-12 md:px-[120px] md:pb-[60px] md:pt-20">
+        <section className="px-6 pb-10 pt-12 md:px-30 md:pb-15 md:pt-20">
           <div className="flex flex-col gap-5 md:gap-6">
             <div className="flex w-fit items-center gap-1.5 rounded-full border border-fp-border px-4 py-1.5">
               <Heart className="h-3.5 w-3.5 text-fp-accent" />
@@ -85,7 +85,7 @@ export default function AboutPage() {
         </section>
 
         {/* Quote */}
-        <section className="bg-fp-bg-card px-6 py-9 md:px-[120px] md:py-12">
+        <section className="bg-fp-bg-card px-6 py-9 md:px-30 md:py-12">
           <p className="max-w-2xl font-space-grotesk text-lg font-semibold leading-relaxed text-fp-text-primary md:text-[22px] md:leading-[1.6]">
             &ldquo;I was tired of gym apps that tried to do everything. I
             didn&apos;t need AI coaches, community features, or meal planners. I
@@ -98,7 +98,7 @@ export default function AboutPage() {
         </section>
 
         {/* Features */}
-        <section className="px-6 py-12 md:px-[120px] md:py-20">
+        <section className="px-6 py-12 md:px-30 md:py-20">
           <h2 className="font-space-grotesk text-[28px] font-extrabold tracking-tight text-fp-text-primary md:text-4xl md:tracking-[-0.3px]">
             What FitPulse Does
           </h2>
@@ -123,7 +123,7 @@ export default function AboutPage() {
         </section>
 
         {/* Built By */}
-        <section className="bg-fp-bg-card px-6 py-12 md:px-[120px] md:py-20">
+        <section className="bg-fp-bg-card px-6 py-12 md:px-30 md:py-20">
           <h2 className="font-space-grotesk text-[28px] font-extrabold tracking-tight text-fp-text-primary md:text-4xl md:tracking-[-0.3px]">
             Built By
           </h2>
@@ -134,6 +134,9 @@ export default function AboutPage() {
             <div className="flex flex-col gap-2">
               <p className="font-space-grotesk text-2xl font-bold text-fp-text-primary">
                 Manav Singh
+              </p>
+              <p className="font-manrope text-sm text-fp-text-tertiary">
+                (Manvendra Singh)
               </p>
               <div className="flex flex-col gap-1.5">
                 <a

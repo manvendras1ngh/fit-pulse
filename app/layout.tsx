@@ -31,25 +31,38 @@ const BASE_URL = "https://fit-pulse-six.vercel.app";
 export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),
   title: {
-    default: "FitPulse — Log fast. Lift heavier.",
+    default: "FitPulse - Free Workout Tracker | Log Exercises, Track Progress",
     template: "%s | FitPulse",
   },
   description:
-    "Track your gym workouts, plan your splits, and watch your progress over time.",
+    "FitPulse is a free workout tracker built by Manav Singh. Log exercises, plan splits, and track your gym progress — no ads, no distractions.",
+  keywords: [
+    "FitPulse",
+    "workout tracker",
+    "exercise tracker",
+    "track exercises",
+    "gym tracker",
+    "workout log",
+    "fitness app",
+    "Manav Singh",
+    "Manvendra Singh",
+  ],
+  authors: [{ name: "Manav Singh", url: "https://dev.manavsingh.in" }],
+  creator: "Manav Singh",
   openGraph: {
     type: "website",
     locale: "en_US",
     url: BASE_URL,
     siteName: "FitPulse",
-    title: "FitPulse — Log fast. Lift heavier.",
+    title: "FitPulse — Free Workout Tracker | Log Exercises, Track Progress",
     description:
-      "Track your gym workouts, plan your splits, and watch your progress over time.",
+      "FitPulse is a free workout tracker built by Manav Singh. Log exercises, plan splits, and track your gym progress — no ads, no distractions.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "FitPulse — Log fast. Lift heavier.",
+    title: "FitPulse — Free Workout Tracker | Log Exercises, Track Progress",
     description:
-      "Track your gym workouts, plan your splits, and watch your progress over time.",
+      "FitPulse is a free workout tracker built by Manav Singh. Log exercises, plan splits, and track your gym progress — no ads, no distractions.",
   },
   robots: {
     index: true,
